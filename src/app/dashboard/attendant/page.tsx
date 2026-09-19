@@ -1,0 +1,212 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { Header } from '@/components/Header';
+import { initialAttendant } from '@/lib/mock-data';
+import { Attendant, PersonalityType } from '@/types';
+import { buildSystemPrompt } from '@/lib/ai-engine';
+import { fetchAttendant, updateAttendant } from '@/lib/supabase/actions';
+import { DEFAULT_ORG_ID } from '@/lib/constants';
+import { Bot, Sparkles, Smile, ShieldCheck, Coffee, Check, Save, Info, Terminal, RefreshCw } from 'lucide-react';
+
+export default function AttendantConfigPage() {
+  const [attendant, setAttendant] = useState<Attendant>(initialAttendant);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [savedSuccess, setSavedSuccess] = useState(false);
+
+  useEffect(() => {
+    async function load() {
+      const data = await fetchAttendant(DEFAULT_ORG_ID);
+      if (data) setAttendant(data);
+      setIsLoading(false);
+    }
+    load();
+  }, []);
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    await updateAttendant(attendant);
+    setIsSaving(false);
+    setSavedSuccess(true);
+    setTimeout(() => setSavedSuccess(false), 3000);
+  };
+
+
+  const generatedPrompt = buildSystemPrompt(attendant, []);
+
+  const personalities: { id: PersonalityType; title: string; desc: string; icon: any }[] = [
+    {
+      id: 'friendly',
+      title: 'Amigável & Caloroso',
+      desc: 'Usará emojis, tom empático, acolhedor e muito simpático.',
+      icon: Smile
+    },
+    {
+      id: 'professional',
+      title: 'Profissional & Elegante',
+      desc: 'Comunicação objetiva, culta, direta e extremamente formal.',
+      icon: ShieldCheck
+    },
+    {
+      id: 'casual',
+      title: 'Descontraído & Leve',
+      desc: 'Tom informal, moderno, leve e conversacional sem rigidez.',
+      icon: Coffee
+    }
+  ];
+
+  return (
+    <div>
+      <Header
+        title="Identidade do Atendente Virtual"
+        subtitle="Configure o nome, personalidade e conduta da sua IA que atenderá via WhatsApp"
+      />
+
+      <div className="p-6 max-w-6xl mx-auto space-y-6">
+
+        {/* Top Notification Banner */}
+        {savedSuccess && (
+          <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 px-4 py-3 rounded-xl flex items-center justify-between animate-in fade-in-50 duration-150">
+            <div className="flex items-center gap-2 text-xs font-semibold">
+              <Check className="w-4 h-4 text-emerald-600" />
+              <span>Configurações da Identidade salvas com sucesso! O prompt dinâmico foi atualizado.</span>
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+          {/* Form Configuration Column */}
+          <form onSubmit={handleSave} className="lg:col-span-7 space-y-6">
+
+            {/* Basic Identity Card */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              <div className="flex items-center gap-2 text-slate-900 font-semibold text-sm pb-3 border-b border-slate-100">
+                <Bot className="w-4 h-4 text-emerald-600" />
+                <span>Dados do Atendente</span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Nome do Atendente Virtual</label>
+                <input
+                  type="text"
+                  value={attendant.name}
+                  onChange={(e) => setAttendant({ ...attendant, name: e.target.value })}
+                  placeholder="Ex: Sofia, Lucas, Assistente Virtual"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-emerald-500 font-medium"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">Este é o nome com o qual a IA se apresentará para os clientes.</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-2">Personalidade</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {personalities.map((p) => {
+                    const Icon = p.icon;
+                    const isSelected = attendant.personality === p.id;
+                    return (
+                      <button
+                        type="button"
+                        key={p.id}
+                        onClick={() => setAttendant({ ...attendant, personality: p.id })}
+                        className={`p-3 rounded-xl border text-left transition-all ${
+                          isSelected
+                            ? 'bg-emerald-50/60 border-emerald-500 text-emerald-950 shadow-sm ring-1 ring-emerald-500/30'
+                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <Icon className={`w-4 h-4 ${isSelected ? 'text-emerald-600' : 'text-slate-400'}`} />
+                          {isSelected && <Check className="w-3.5 h-3.5 text-emerald-600" />}
+                        </div>
+                        <p className="text-xs font-semibold leading-snug">{p.title}</p>
+                        <p className="text-[10px] text-slate-500 mt-1 leading-normal">{p.desc}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Tom de Voz Detalhado</label>
+                <input
+                  type="text"
+                  value={attendant.voice_tone}
+                  onChange={(e) => setAttendant({ ...attendant, voice_tone: e.target.value })}
+                  placeholder="Ex: Atencioso, bem-humorado e objetivo"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+            </div>
+
+            {/* Business Context & Custom Instructions */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              <div className="flex items-center gap-2 text-slate-900 font-semibold text-sm pb-3 border-b border-slate-100">
+                <Info className="w-4 h-4 text-emerald-600" />
+                <span>Instruções do Negócio & Conduta</span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Resumo das Atividades do Negócio</label>
+                <textarea
+                  rows={3}
+                  value={attendant.business_info}
+                  onChange={(e) => setAttendant({ ...attendant, business_info: e.target.value })}
+                  placeholder="Descreva o que seu negócio faz, localização e resumo dos atendimentos..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-emerald-500 leading-relaxed"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Instruções de Conduta Personalizadas</label>
+                <textarea
+                  rows={4}
+                  value={attendant.custom_instructions}
+                  onChange={(e) => setAttendant({ ...attendant, custom_instructions: e.target.value })}
+                  placeholder="Ex: NUNCA dê descontos sem autorização. Se o cliente reclamar, peça desculpas e acione o atendimento humano..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-emerald-500 leading-relaxed"
+                />
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs py-3 px-4 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>Salvar Configurações da Identidade</span>
+                </button>
+              </div>
+            </div>
+
+          </form>
+
+          {/* AI Prompt Live Preview Column */}
+          <div className="lg:col-span-5 space-y-4">
+            <div className="bg-slate-900 text-slate-200 p-6 rounded-2xl border border-slate-800 shadow-xl flex flex-col h-full">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+                <div className="flex items-center gap-2">
+                  <Terminal className="w-4 h-4 text-emerald-400" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">Prompt do Sistema (Claude IA)</span>
+                </div>
+                <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded font-mono">Gerado Dinamicamente</span>
+              </div>
+
+              <p className="text-xs text-slate-400 mb-3">
+                Este é o prompt exato construído em tempo real que será enviado para a API do Anthropic Claude a cada mensagem recebida no WhatsApp:
+              </p>
+
+              <div className="flex-1 bg-slate-950 p-4 rounded-xl font-mono text-[11px] leading-relaxed text-slate-300 overflow-y-auto max-h-[460px] border border-slate-800 whitespace-pre-wrap select-all">
+                {generatedPrompt}
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  );
+}
