@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const planId = req.nextUrl.searchParams.get('plan') || 'pro';
+  const planId = req.nextUrl.searchParams.get('plan') || req.nextUrl.searchParams.get('tier') || 'pro';
   const plan = PLAN_LINKS[planId] || PLAN_LINKS.pro;
 
   return NextResponse.redirect(plan.url);
