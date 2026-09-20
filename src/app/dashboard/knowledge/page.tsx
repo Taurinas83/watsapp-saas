@@ -5,7 +5,7 @@ import { Header } from '@/components/Header';
 import { initialKnowledgeItems } from '@/lib/mock-data';
 import { KnowledgeItem, KnowledgeCategory } from '@/types';
 import { searchKnowledgeBase } from '@/lib/ai-engine';
-import { fetchKnowledgeItems, createKnowledgeItem, deleteKnowledgeItem } from '@/lib/supabase/actions';
+import { fetchKnowledgeItems, createKnowledgeItem, deleteKnowledgeItem, getCurrentUserOrganizationId } from '@/lib/supabase/actions';
 import { DEFAULT_ORG_ID } from '@/lib/constants';
 import {
   BookOpen,
@@ -26,6 +26,7 @@ import {
 
 export default function KnowledgeBasePage() {
   const [items, setItems] = useState<KnowledgeItem[]>(initialKnowledgeItems);
+  const [orgId, setOrgId] = useState<string>(DEFAULT_ORG_ID);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -43,7 +44,9 @@ export default function KnowledgeBasePage() {
 
   useEffect(() => {
     async function load() {
-      const data = await fetchKnowledgeItems(DEFAULT_ORG_ID);
+      const currentOrgId = await getCurrentUserOrganizationId();
+      setOrgId(currentOrgId);
+      const data = await fetchKnowledgeItems(currentOrgId);
       if (data && data.length > 0) {
         setItems(data);
       }
@@ -56,13 +59,13 @@ export default function KnowledgeBasePage() {
     e.preventDefault();
     if (!formQuestion.trim() || !formAnswer.trim()) return;
 
-    const newItem = await createKnowledgeItem(DEFAULT_ORG_ID, formCategory, formQuestion, formAnswer);
+    const newItem = await createKnowledgeItem(orgId, formCategory, formQuestion, formAnswer);
     if (newItem) {
       setItems(prev => [newItem, ...prev]);
     } else {
       const fallback: KnowledgeItem = {
         id: `k-${Date.now()}`,
-        organization_id: DEFAULT_ORG_ID,
+        organization_id: orgId,
         category: formCategory,
         question: formQuestion,
         answer: formAnswer,

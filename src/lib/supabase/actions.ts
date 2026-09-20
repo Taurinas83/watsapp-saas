@@ -2,6 +2,32 @@ import { createClient } from './client';
 import { Attendant, KnowledgeItem, Conversation, Message, KnowledgeCategory, ConversationStatus } from '@/types';
 
 /**
+ * USUÁRIO: Obter o ID da organização do usuário atualmente autenticado
+ */
+export async function getCurrentUserOrganizationId(): Promise<string> {
+  const supabase = createClient();
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('organization_id')
+        .eq('id', user.id)
+        .single();
+
+      if (profile?.organization_id) {
+        return profile.organization_id;
+      }
+    }
+  } catch (err) {
+    console.error('Erro ao buscar organização do usuário autenticado:', err);
+  }
+
+  // Fallback para a organização padrão caso não haja usuário logado ou em ambiente de desenvolvimento
+  return 'a0000000-0000-0000-0000-000000000001';
+}
+
+/**
  * ATENDENTE: Buscar configurações do atendente virtual no Supabase
  */
 export async function fetchAttendant(organizationId: string): Promise<Attendant | null> {
@@ -17,21 +43,27 @@ export async function fetchAttendant(organizationId: string): Promise<Attendant 
 }
 
 /**
- * ATENDENTE: Atualizar configurações do atendente virtual
+ * ATENDENTE: Atualizar configurações do atendente virtual (upsert por organization_id)
  */
-export async function updateAttendant(attendant: Partial<Attendant> & { id: string }): Promise<boolean> {
+export async function updateAttendant(attendant: Partial<Attendant> & { organization_id?: string; id?: string }): Promise<boolean> {
   const supabase = createClient();
+  const orgId = attendant.organization_id || await getCurrentUserOrganizationId();
+
   const { error } = await supabase
     .from('attendants')
-    .update({
-      name: attendant.name,
-      personality: attendant.personality,
-      voice_tone: attendant.voice_tone,
-      business_info: attendant.business_info,
-      custom_instructions: attendant.custom_instructions,
+    .upsert({
+      organization_id: orgId,
+      name: attendant.name || 'Assistente Virtual',
+      personality: attendant.personality || 'professional',
+      voice_tone: attendant.voice_tone || 'Atencioso, prestativo e eficiente',
+      business_info: attendant.business_info || '',
+      custom_instructions: attendant.custom_instructions || '',
       updated_at: new Date().toISOString()
-    })
-    .eq('id', attendant.id);
+    }, { onConflict: 'organization_id' });
+
+  if (error) {
+    console.error('Erro ao salvar atendente no Supabase:', error);
+  }
 
   return !error;
 }

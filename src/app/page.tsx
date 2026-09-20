@@ -241,9 +241,14 @@ export default function LandingPage() {
                   <li className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-400" /> Painel de Inbox para 1 operador</li>
                 </ul>
               </div>
-              <Link href="/login" className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs text-center transition-all">
-                Contratar Starter
-              </Link>
+              <a
+                href="https://www.asaas.com/c/i9vryhz03j002dnn"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs text-center transition-all block"
+              >
+                Contratar Starter (R$ 149/mês)
+              </a>
             </div>
 
             {/* Pro Plan (Highlighted) */}
@@ -267,9 +272,14 @@ export default function LandingPage() {
                   <li className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-400" /> Relatórios de métricas avançados</li>
                 </ul>
               </div>
-              <Link href="/login" className="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs text-center transition-all shadow-lg shadow-emerald-500/20">
-                Começar Teste Grátis (7 dias)
-              </Link>
+              <a
+                href="https://www.asaas.com/c/ukq2r3jczggrhibc"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs text-center transition-all shadow-lg shadow-emerald-500/20 block"
+              >
+                Assinar Pro Negócios (R$ 299/mês)
+              </a>
             </div>
 
             {/* Enterprise Plan */}
@@ -288,9 +298,14 @@ export default function LandingPage() {
                   <li className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-400" /> Treinamento de IA sob medida</li>
                 </ul>
               </div>
-              <Link href="/login" className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs text-center transition-all">
-                Falar com Consultor
-              </Link>
+              <a
+                href="https://www.asaas.com/c/93308y4cw5ssn2vl"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs text-center transition-all block"
+              >
+                Assinar Enterprise (R$ 599/mês)
+              </a>
             </div>
 
           </div>

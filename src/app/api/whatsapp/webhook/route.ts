@@ -386,16 +386,31 @@ export async function POST(req: NextRequest) {
         sendTypingIndicator(instance, customerPhone);
 
         // ── CONFIGURAÇÕES DA ORGANIZAÇÃO (REGRA 16: ISOLAMENTO MULTI-TENANT) ─
-        const [attendantData, knowledgeItemsData, conversationHistoryData] = await Promise.all([
+        const [orgData, attendantData, knowledgeItemsData, conversationHistoryData] = await Promise.all([
+          Promise.resolve(
+            supabase
+              .from('organizations')
+              .select('plan_tier, ai_model_preference')
+              .eq('id', organizationId)
+              .single()
+          ).catch(() => null),
           fetchAttendant(organizationId).catch(() => null),
           fetchKnowledgeItems(organizationId).catch(() => []),
-          supabase
-            .from('messages')
-            .select('*')
-            .eq('conversation_id', conv.id)
-            .order('created_at', { ascending: true })
-            .limit(10),
+          Promise.resolve(
+            supabase
+              .from('messages')
+              .select('*')
+              .eq('conversation_id', conv.id)
+              .order('created_at', { ascending: true })
+              .limit(10)
+          ).catch(() => null),
         ]);
+
+        const org = orgData?.data;
+        const modelPreference: 'claude' | 'gemini' =
+          org?.ai_model_preference === 'claude' || org?.plan_tier === 'pro' || org?.plan_tier === 'enterprise'
+            ? 'claude'
+            : 'gemini';
 
         const attendant = attendantData || initialAttendant;
         const knowledgeItems = knowledgeItemsData && knowledgeItemsData.length > 0
@@ -405,7 +420,13 @@ export async function POST(req: NextRequest) {
 
         // ── REGRA 21: MODO COPILOTO (HUMAN-IN-THE-LOOP) ──────────────────────
         if (attendant.copilot_mode === true) {
-          const aiResult = await generateBotResponse(sanitizedUserText, attendant, knowledgeItems, history);
+          const aiResult = await generateBotResponse(
+            sanitizedUserText,
+            attendant,
+            knowledgeItems,
+            history,
+            modelPreference
+          );
           // Salvar apenas como sugestão de IA, sem disparar mensagem real
           await supabase.from('messages').insert({
             conversation_id: conv.id,
@@ -426,7 +447,8 @@ export async function POST(req: NextRequest) {
           sanitizedUserText,
           attendant,
           knowledgeItems,
-          history
+          history,
+          modelPreference
         );
 
         // Se ocorreu transbordo humano (Regra 18)

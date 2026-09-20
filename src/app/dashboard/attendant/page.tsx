@@ -5,20 +5,27 @@ import { Header } from '@/components/Header';
 import { initialAttendant } from '@/lib/mock-data';
 import { Attendant, PersonalityType } from '@/types';
 import { buildSystemPrompt } from '@/lib/ai-engine';
-import { fetchAttendant, updateAttendant } from '@/lib/supabase/actions';
+import { fetchAttendant, updateAttendant, getCurrentUserOrganizationId } from '@/lib/supabase/actions';
 import { DEFAULT_ORG_ID } from '@/lib/constants';
 import { Bot, Sparkles, Smile, ShieldCheck, Coffee, Check, Save, Info, Terminal, RefreshCw } from 'lucide-react';
 
 export default function AttendantConfigPage() {
   const [attendant, setAttendant] = useState<Attendant>(initialAttendant);
+  const [orgId, setOrgId] = useState<string>(DEFAULT_ORG_ID);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   useEffect(() => {
     async function load() {
-      const data = await fetchAttendant(DEFAULT_ORG_ID);
-      if (data) setAttendant(data);
+      const currentOrgId = await getCurrentUserOrganizationId();
+      setOrgId(currentOrgId);
+      const data = await fetchAttendant(currentOrgId);
+      if (data) {
+        setAttendant(data);
+      } else {
+        setAttendant(prev => ({ ...prev, organization_id: currentOrgId }));
+      }
       setIsLoading(false);
     }
     load();
@@ -27,7 +34,7 @@ export default function AttendantConfigPage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
-    await updateAttendant(attendant);
+    await updateAttendant({ ...attendant, organization_id: orgId });
     setIsSaving(false);
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3000);

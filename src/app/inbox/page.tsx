@@ -6,7 +6,7 @@ import { initialConversations, initialMessages, initialAttendant, initialKnowled
 import { DEFAULT_ORG_ID } from '@/lib/constants';
 import { Conversation, Message, ConversationStatus } from '@/types';
 import { generateBotResponse } from '@/lib/ai-engine';
-import { fetchConversations, fetchMessages, insertMessage, updateConversationStatus } from '@/lib/supabase/actions';
+import { fetchConversations, fetchMessages, insertMessage, updateConversationStatus, getCurrentUserOrganizationId } from '@/lib/supabase/actions';
 import {
   MessageSquare,
   Search,
@@ -32,11 +32,14 @@ export default function UnifiedInboxPage() {
   const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
   const [activeConvId, setActiveConvId] = useState<string>(initialConversations[0]?.id || '');
   const [allMessages, setAllMessages] = useState<Record<string, Message[]>>(initialMessages);
+  const [orgId, setOrgId] = useState<string>(DEFAULT_ORG_ID);
 
   // Carregar conversas reais do Supabase DB com Polling em tempo real
   useEffect(() => {
     async function loadConvs() {
-      const dbConvs = await fetchConversations(DEFAULT_ORG_ID);
+      const currentOrgId = await getCurrentUserOrganizationId();
+      setOrgId(currentOrgId);
+      const dbConvs = await fetchConversations(currentOrgId);
       if (dbConvs && dbConvs.length > 0) {
         setConversations(dbConvs);
         setActiveConvId(prev => prev || dbConvs[0].id);
@@ -44,7 +47,13 @@ export default function UnifiedInboxPage() {
     }
     loadConvs();
 
-    const interval = setInterval(loadConvs, 3000);
+    const interval = setInterval(async () => {
+      const currentOrgId = await getCurrentUserOrganizationId();
+      const dbConvs = await fetchConversations(currentOrgId);
+      if (dbConvs && dbConvs.length > 0) {
+        setConversations(dbConvs);
+      }
+    }, 4000);
     return () => clearInterval(interval);
   }, []);
 
@@ -133,7 +142,7 @@ export default function UnifiedInboxPage() {
     // Persistir mensagem no Supabase
     const savedMsg = await insertMessage(
       activeConvId,
-      DEFAULT_ORG_ID,
+      orgId,
       'operator',
       'Atendente Humano',
       text
@@ -142,7 +151,7 @@ export default function UnifiedInboxPage() {
     const newMsg: Message = savedMsg || {
       id: `msg-op-${Date.now()}`,
       conversation_id: activeConvId,
-      organization_id: DEFAULT_ORG_ID,
+      organization_id: orgId,
       sender_type: 'operator',
       sender_name: 'Atendente Humano',
       content: text,
@@ -195,7 +204,7 @@ export default function UnifiedInboxPage() {
     const customerMsg: Message = {
       id: `msg-cust-${Date.now()}`,
       conversation_id: activeConvId,
-      organization_id: DEFAULT_ORG_ID,
+      organization_id: orgId,
       sender_type: 'customer',
       sender_name: activeConv.customer_name,
       content: promptText,
@@ -221,7 +230,7 @@ export default function UnifiedInboxPage() {
         const botMsg: Message = {
           id: `msg-bot-${Date.now()}`,
           conversation_id: activeConvId,
-          organization_id: DEFAULT_ORG_ID,
+          organization_id: orgId,
           sender_type: 'bot',
           sender_name: `${initialAttendant.name} (IA)`,
           content: response.content,

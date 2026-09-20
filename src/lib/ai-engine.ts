@@ -309,34 +309,48 @@ export async function generateGeminiResponse(
   const geminiApiKey = process.env.GEMINI_API_KEY?.trim();
   if (!geminiApiKey) return null;
 
-  try {
-    const fetchPromise = fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: 'user',
-              parts: [{ text: `${systemPrompt}\n\nMensagem do Cliente no WhatsApp: ${userMessage}` }],
-            },
-          ],
-        }),
+  // Lista de modelos Gemini modernos suportados
+  const GEMINI_MODELS = [
+    'gemini-2.5-flash',
+    'gemini-2.5-flash-lite',
+    'gemini-flash-latest',
+  ];
+
+  for (const model of GEMINI_MODELS) {
+    try {
+      const fetchPromise = fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [
+              {
+                role: 'user',
+                parts: [{ text: `${systemPrompt}\n\nMensagem do Cliente no WhatsApp: ${userMessage}` }],
+              },
+            ],
+          }),
+        }
+      );
+
+      const timeoutPromise = new Promise<Response>((_, reject) =>
+        setTimeout(() => reject(new Error('LLM_TIMEOUT')), LLM_TIMEOUT_MS)
+      );
+
+      const res = await Promise.race([fetchPromise, timeoutPromise]);
+      const data = await res.json();
+      const candidateText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      if (candidateText) {
+        return candidateText;
       }
-    );
-
-    const timeoutPromise = new Promise<Response>((_, reject) =>
-      setTimeout(() => reject(new Error('LLM_TIMEOUT')), LLM_TIMEOUT_MS)
-    );
-
-    const res = await Promise.race([fetchPromise, timeoutPromise]);
-    const data = await res.json();
-    return data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || null;
-  } catch (err: any) {
-    console.error('Erro na chamada Gemini API:', err.message);
-    return null;
+    } catch (err: any) {
+      console.error(`Tentativa com modelo ${model} falhou:`, err.message);
+      continue;
+    }
   }
+
+  return null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -394,14 +408,23 @@ export async function generateBotResponse(
   let aiContent: string | null = null;
   let modelUsed = 'none';
 
-  if (modelPreference === 'claude' || !process.env.GEMINI_API_KEY) {
+  if (modelPreference === 'gemini' && process.env.GEMINI_API_KEY) {
+    aiContent = await generateGeminiResponse(systemPrompt, userMessage);
+    if (aiContent) modelUsed = 'gemini-2.5-flash';
+  }
+
+  if (!aiContent && (modelPreference === 'claude' || !process.env.GEMINI_API_KEY)) {
     aiContent = await generateClaudeResponse(systemPrompt, userMessage, conversationHistory);
     if (aiContent) modelUsed = 'claude-sonnet-4-6';
   }
 
-  if (!aiContent && process.env.GEMINI_API_KEY) {
+  // Fallback cruzado se o primeiro falhar
+  if (!aiContent && modelPreference === 'claude' && process.env.GEMINI_API_KEY) {
     aiContent = await generateGeminiResponse(systemPrompt, userMessage);
-    if (aiContent) modelUsed = 'gemini-1.5-flash';
+    if (aiContent) modelUsed = 'gemini-2.5-flash';
+  } else if (!aiContent && modelPreference === 'gemini' && process.env.ANTHROPIC_API_KEY) {
+    aiContent = await generateClaudeResponse(systemPrompt, userMessage, conversationHistory);
+    if (aiContent) modelUsed = 'claude-sonnet-4-6';
   }
 
   // 5. Se o modelo LLM respondeu com sucesso

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { initialConversations, initialMessages } from '@/lib/mock-data';
 import { Conversation, ConversationStatus, Message } from '@/types';
-import { fetchConversations, fetchMessages, updateConversationStatus } from '@/lib/supabase/actions';
+import { fetchConversations, fetchMessages, updateConversationStatus, getCurrentUserOrganizationId } from '@/lib/supabase/actions';
 import { DEFAULT_ORG_ID } from '@/lib/constants';
 import {
   Eye,
@@ -29,10 +29,13 @@ export default function SupervisionPage() {
   const [messagesMap, setMessagesMap] = useState<Record<string, Message[]>>(initialMessages);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [isLoading, setIsLoading] = useState(true);
+  const [orgId, setOrgId] = useState<string>(DEFAULT_ORG_ID);
 
   useEffect(() => {
     async function load() {
-      const dbConvs = await fetchConversations(DEFAULT_ORG_ID);
+      const currentOrgId = await getCurrentUserOrganizationId();
+      setOrgId(currentOrgId);
+      const dbConvs = await fetchConversations(currentOrgId);
       if (dbConvs && dbConvs.length > 0) {
         setConversations(dbConvs);
         setSelectedConvId(prev => prev || dbConvs[0].id);
@@ -41,7 +44,13 @@ export default function SupervisionPage() {
     }
     load();
 
-    const interval = setInterval(load, 3000);
+    const interval = setInterval(async () => {
+      const currentOrgId = await getCurrentUserOrganizationId();
+      const dbConvs = await fetchConversations(currentOrgId);
+      if (dbConvs && dbConvs.length > 0) {
+        setConversations(dbConvs);
+      }
+    }, 4000);
     return () => clearInterval(interval);
   }, []);
 
