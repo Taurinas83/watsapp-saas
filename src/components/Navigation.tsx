@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
   Bot,
@@ -11,7 +12,6 @@ import {
   BarChart3,
   Settings,
   MessageSquare,
-  Sparkles,
   UserCheck,
   Building2
 } from 'lucide-react';
@@ -29,7 +29,7 @@ export function Navigation({ userRole = 'admin' }: NavProps) {
       name: 'Identidade do Atendente',
       href: '/dashboard/attendant',
       icon: Bot,
-      badge: 'Cérebro IA'
+      badge: 'IA'
     },
     {
       name: 'Conexão WhatsApp',
@@ -69,30 +69,38 @@ export function Navigation({ userRole = 'admin' }: NavProps) {
   ];
 
   return (
-    <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col h-screen sticky top-0 border-r border-slate-800 select-none z-30">
-      {/* App Branding */}
-      <div className="p-5 border-b border-slate-800 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-            <Sparkles className="w-5 h-5 text-slate-950" />
+    <aside className="w-64 bg-white text-slate-700 flex flex-col h-screen sticky top-0 border-r border-[#E0E3E1] select-none z-30 shadow-sm">
+
+      {/* Zapella Logo */}
+      <div className="px-5 py-4 border-b border-[#E0E3E1] flex items-center">
+        <Link href="/" className="flex items-center gap-3 group">
+          <div className="w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center shrink-0 shadow-md"
+               style={{ background: 'linear-gradient(135deg, #00E676 0%, #7C4DFF 100%)' }}>
+            <Image
+              src="/zapella-icon.png"
+              alt="Zapella Icon"
+              width={36}
+              height={36}
+              className="w-full h-full object-cover"
+            />
           </div>
           <div>
-            <h1 className="font-bold text-white text-base leading-tight tracking-tight">AtendenteVirtual</h1>
-            <p className="text-xs text-emerald-400 font-medium">SaaS WhatsApp AI</p>
+            <span className="font-extrabold text-[#171901] text-base tracking-tight leading-none">Zapella</span>
+            <p className="text-[10px] font-medium mt-0.5" style={{ color: '#2E7D5A' }}>Secretária IA para WhatsApp</p>
           </div>
         </Link>
       </div>
 
       {/* Navigation Sections */}
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
 
-        {/* Section 1: Painel do Cliente (Dono do Negócio) */}
+        {/* Section 1: Painel do Cliente */}
         <div>
-          <div className="px-3 mb-2 flex items-center justify-between text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            <span>PAINEL DO CLIENTE</span>
-            <Building2 className="w-3.5 h-3.5" />
+          <div className="px-3 mb-1.5 flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-[#4D4D61]">Painel do Cliente</span>
+            <Building2 className="w-3 h-3 text-[#4D4D61]" />
           </div>
-          <nav className="space-y-1">
+          <nav className="space-y-0.5">
             {clientPanelItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
@@ -101,21 +109,32 @@ export function Navigation({ userRole = 'admin' }: NavProps) {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 group",
+                    "flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group",
                     isActive
-                      ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold"
-                      : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+                      ? "text-[#171901] font-semibold"
+                      : "text-[#4D4D61] hover:text-[#171901] hover:bg-[#F4F5F4]"
                   )}
+                  style={isActive ? {
+                    backgroundColor: 'rgba(0, 230, 118, 0.10)',
+                    borderLeft: '3px solid #00E676',
+                    paddingLeft: '9px'
+                  } : {}}
                 >
                   <div className="flex items-center gap-3">
-                    <Icon className={cn("w-4 h-4 transition-colors", isActive ? "text-emerald-400" : "text-slate-500 group-hover:text-slate-300")} />
-                    <span>{item.name}</span>
+                    <Icon
+                      className={cn("w-4 h-4 transition-colors shrink-0")}
+                      style={{ color: isActive ? '#00E676' : '#4D4D61' }}
+                    />
+                    <span className="text-xs">{item.name}</span>
                   </div>
                   {item.badge && (
-                    <span className={cn(
-                      "text-[10px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider",
-                      isActive ? "bg-emerald-500/20 text-emerald-300" : "bg-slate-800 text-slate-400"
-                    )}>
+                    <span
+                      className="text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider"
+                      style={isActive
+                        ? { backgroundColor: 'rgba(0,230,118,0.15)', color: '#2E7D5A' }
+                        : { backgroundColor: '#F4F5F4', color: '#4D4D61' }
+                      }
+                    >
                       {item.badge}
                     </span>
                   )}
@@ -125,13 +144,13 @@ export function Navigation({ userRole = 'admin' }: NavProps) {
           </nav>
         </div>
 
-        {/* Section 2: Painel da Equipe de Atendimento (Inbox) */}
+        {/* Section 2: Equipe de Atendimento */}
         <div>
-          <div className="px-3 mb-2 flex items-center justify-between text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            <span>EQUIPE DE ATENDIMENTO</span>
-            <UserCheck className="w-3.5 h-3.5" />
+          <div className="px-3 mb-1.5 flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-[#4D4D61]">Atendimento</span>
+            <UserCheck className="w-3 h-3 text-[#4D4D61]" />
           </div>
-          <nav className="space-y-1">
+          <nav className="space-y-0.5">
             {teamPanelItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
@@ -140,18 +159,29 @@ export function Navigation({ userRole = 'admin' }: NavProps) {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 group",
+                    "flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group",
                     isActive
-                      ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold"
-                      : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+                      ? "text-[#171901] font-semibold"
+                      : "text-[#4D4D61] hover:text-[#171901] hover:bg-[#F4F5F4]"
                   )}
+                  style={isActive ? {
+                    backgroundColor: 'rgba(0, 230, 118, 0.10)',
+                    borderLeft: '3px solid #00E676',
+                    paddingLeft: '9px'
+                  } : {}}
                 >
                   <div className="flex items-center gap-3">
-                    <Icon className={cn("w-4 h-4 transition-colors", isActive ? "text-emerald-400" : "text-slate-500 group-hover:text-slate-300")} />
-                    <span>{item.name}</span>
+                    <Icon
+                      className="w-4 h-4 shrink-0 transition-colors"
+                      style={{ color: isActive ? '#00E676' : '#4D4D61' }}
+                    />
+                    <span className="text-xs">{item.name}</span>
                   </div>
                   {item.badge && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider bg-emerald-500 text-slate-950">
+                    <span
+                      className="text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider animate-pulse"
+                      style={{ background: '#00E676', color: '#171901' }}
+                    >
                       {item.badge}
                     </span>
                   )}
@@ -162,15 +192,18 @@ export function Navigation({ userRole = 'admin' }: NavProps) {
         </div>
       </div>
 
-      {/* Footer / User Profile Info */}
-      <div className="p-3 border-t border-slate-800 bg-slate-950/50">
-        <div className="flex items-center gap-3 p-2 rounded-lg bg-slate-900/80 border border-slate-800">
-          <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center text-xs">
-            WA
+      {/* Footer / User Info */}
+      <div className="p-3 border-t border-[#E0E3E1]">
+        <div className="flex items-center gap-3 p-2.5 rounded-xl bg-[#F4F5F4]">
+          <div
+            className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs shrink-0"
+            style={{ background: 'linear-gradient(135deg, #00E676 0%, #7C4DFF 100%)' }}
+          >
+            ZP
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-white truncate">Minha Empresa</p>
-            <p className="text-[11px] text-slate-400 truncate">Plano Pro (Ativo)</p>
+            <p className="text-xs font-semibold text-[#171901] truncate">Minha Empresa</p>
+            <p className="text-[10px] text-[#4D4D61] truncate">Plano Pro · Ativo</p>
           </div>
         </div>
       </div>

@@ -41,8 +41,8 @@ export default function GeneralSettingsPage() {
       <div className="p-6 max-w-5xl mx-auto space-y-6">
 
         {savedSuccess && (
-          <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-xl flex items-center gap-2 text-xs font-semibold">
-            <Check className="w-4 h-4 text-emerald-600" />
+          <div className="bg-[#F4F5F4] border border-emerald-200 text-emerald-800 px-4 py-3 rounded-xl flex items-center gap-2 text-xs font-semibold">
+            <Check className="w-4 h-4 text-[#2E7D5A]" />
             <span>Configurações salvas com sucesso!</span>
           </div>
         )}
@@ -52,7 +52,7 @@ export default function GeneralSettingsPage() {
           {/* Operating Hours Card */}
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
             <div className="flex items-center gap-2 text-slate-900 font-semibold text-sm pb-3 border-b border-slate-100">
-              <Clock className="w-4 h-4 text-emerald-600" />
+              <Clock className="w-4 h-4 text-[#2E7D5A]" />
               <span>Horário de Funcionamento Comercial</span>
             </div>
 
@@ -88,7 +88,7 @@ export default function GeneralSettingsPage() {
                           updated[idx].open = e.target.value;
                           setSchedule(updated);
                         }}
-                        className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-medium focus:outline-none focus:border-emerald-500"
+                        className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-medium focus:outline-none focus:border-[#00E676]"
                       />
                       <span>Fecha às</span>
                       <input
@@ -99,7 +99,7 @@ export default function GeneralSettingsPage() {
                           updated[idx].close = e.target.value;
                           setSchedule(updated);
                         }}
-                        className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-medium focus:outline-none focus:border-emerald-500"
+                        className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-medium focus:outline-none focus:border-[#00E676]"
                       />
                     </div>
                   ) : (
@@ -115,7 +115,7 @@ export default function GeneralSettingsPage() {
                 rows={3}
                 value={outOfHoursMsg}
                 onChange={(e) => setOutOfHoursMsg(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#00E676]"
               />
             </div>
           </div>
@@ -123,7 +123,7 @@ export default function GeneralSettingsPage() {
           {/* Notifications Card */}
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
             <div className="flex items-center gap-2 text-slate-900 font-semibold text-sm pb-3 border-b border-slate-100">
-              <Bell className="w-4 h-4 text-emerald-600" />
+              <Bell className="w-4 h-4 text-[#2E7D5A]" />
               <span>Notificações de Transferência (Handover)</span>
             </div>
 
@@ -165,7 +165,7 @@ export default function GeneralSettingsPage() {
           <div className="flex justify-end">
             <button
               type="submit"
-              className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm transition-all flex items-center gap-2"
+              className="px-6 py-3 rounded-xl bg-[#00E676] hover:bg-[#43A047] text-[#171901] font-semibold text-xs shadow-sm transition-all flex items-center gap-2"
             >
               <Save className="w-4 h-4" />
               <span>Salvar Alterações Gerais</span>

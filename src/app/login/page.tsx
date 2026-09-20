@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Sparkles, ArrowRight, Lock, Mail, Building, User, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, Lock, Mail, Building, User, CheckCircle2, ShieldCheck } from 'lucide-react';
 
 import { createClient } from '@/lib/supabase/client';
 
@@ -16,7 +17,6 @@ export default function LoginPage() {
   const [companyName, setCompanyName] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,19 +43,15 @@ export default function LoginPage() {
         });
         if (error) throw error;
 
-        // Se o usuário foi criado com sucesso
         if (data?.user && !data.session) {
-          setSuccessMsg('Cadastro realizado com sucesso! Um e-mail de confirmação foi enviado.');
+          setSuccessMsg('Cadastro realizado! Verifique seu e-mail para confirmar a conta.');
           setLoading(false);
           return;
         }
 
         router.push('/dashboard/attendant');
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password
-        });
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         router.push('/dashboard/attendant');
       }
@@ -67,149 +63,188 @@ export default function LoginPage() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 text-slate-100 relative overflow-hidden">
-      {/* Background Decorator */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-96 bg-gradient-to-b from-emerald-500/10 via-emerald-500/5 to-transparent blur-3xl pointer-events-none"></div>
+  const inputClass = "w-full bg-white border border-[#E0E3E1] rounded-xl pl-9 pr-4 py-2.5 text-xs text-[#171901] placeholder-[#4D4D61]/60 focus:outline-none focus:border-[#00E676] transition-colors";
 
-      <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10 text-center">
-        <Link href="/" className="inline-flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-            <Sparkles className="w-6 h-6 text-slate-950" />
+  return (
+    <div className="min-h-screen flex font-sans" style={{ background: '#F4F5F4' }}>
+
+      {/* Left decorative panel (hidden on mobile) */}
+      <div className="hidden lg:flex lg:w-1/2 relative items-center justify-center p-12 flex-col text-white"
+           style={{ background: 'linear-gradient(135deg, #171901 0%, #2E7D5A 50%, #7C4DFF 100%)' }}>
+        {/* Pattern */}
+        <div className="absolute inset-0 opacity-10" style={{
+          backgroundImage: 'radial-gradient(circle at 30% 40%, white 1px, transparent 1px), radial-gradient(circle at 70% 70%, white 1px, transparent 1px)',
+          backgroundSize: '48px 48px'
+        }} />
+
+        <div className="relative text-center space-y-6 max-w-md">
+          <div className="inline-flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-2xl overflow-hidden shadow-lg"
+                 style={{ background: 'linear-gradient(135deg, #00E676 0%, #7C4DFF 100%)' }}>
+              <Image src="/zapella-icon.png" alt="Zapella" width={48} height={48} className="w-full h-full object-cover" />
+            </div>
+            <span className="font-extrabold text-white text-2xl tracking-tight">Zapella</span>
           </div>
-        </Link>
-        <h2 className="text-2xl font-bold tracking-tight text-white">
-          {isRegister ? 'Crie sua conta no SaaS' : 'Acesse sua conta'}
-        </h2>
-        <p className="mt-2 text-xs text-slate-400">
-          Atendente Virtual Inteligente via WhatsApp para Pequenos Negócios
-        </p>
+
+          <h2 className="text-3xl font-extrabold text-white leading-tight">
+            Sua secretária virtual <span style={{ color: '#00E676' }}>inteligente</span> para WhatsApp
+          </h2>
+          <p className="text-green-100 text-sm leading-relaxed">
+            Automatize o atendimento, responda clientes 24/7 e supervisione conversas em tempo real — tudo em um único painel.
+          </p>
+
+          {/* Mini stats */}
+          <div className="grid grid-cols-3 gap-4 pt-4">
+            {[
+              { val: '+2.400', label: 'Empresas' },
+              { val: '98.2%', label: 'Precisão' },
+              { val: '24/7', label: 'Disponível' },
+            ].map(s => (
+              <div key={s.label} className="text-center">
+                <p className="text-xl font-extrabold text-white">{s.val}</p>
+                <p className="text-xs text-green-200">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10 px-4">
-        <div className="bg-slate-900/90 backdrop-blur-md py-8 px-6 shadow-2xl border border-slate-800 rounded-2xl sm:px-10">
-          
-          {/* Tab Switcher */}
-          <div className="flex bg-slate-950 p-1 rounded-xl mb-6 border border-slate-800">
-            <button
-              type="button"
-              onClick={() => setIsRegister(false)}
-              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${
-                !isRegister ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              Entrar
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsRegister(true)}
-              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${
-                isRegister ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              Cadastrar Negócio
-            </button>
-          </div>
+      {/* Right: Login Form */}
+      <div className="flex-1 flex flex-col justify-center items-center py-12 px-6 sm:px-12">
 
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            {errorMsg && (
-              <div className="p-3.5 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-400 text-xs flex items-center gap-2">
-                <span>{errorMsg}</span>
-              </div>
-            )}
-
-            {successMsg && (
-              <div className="p-3.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-400 text-xs flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 shrink-0" />
-                <span>{successMsg}</span>
-              </div>
-            )}
-
-            {isRegister && (
-              <>
-                <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Seu Nome Completo</label>
-                  <div className="relative">
-                    <User className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
-                    <input
-                      type="text"
-                      required
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      placeholder="Ex: Ana Maria Silva"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Nome da sua Empresa / Loja</label>
-                  <div className="relative">
-                    <Building className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
-                    <input
-                      type="text"
-                      required
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
-                      placeholder="Ex: Minha Empresa"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-                </div>
-              </>
-            )}
-
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">E-mail Profissional</label>
-              <div className="relative">
-                <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="seuemail@empresa.com"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
-                />
-              </div>
+        {/* Mobile logo */}
+        <div className="lg:hidden mb-8 text-center">
+          <Link href="/" className="inline-flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl overflow-hidden shadow-md"
+                 style={{ background: 'linear-gradient(135deg, #00E676 0%, #7C4DFF 100%)' }}>
+              <Image src="/zapella-icon.png" alt="Zapella" width={40} height={40} className="w-full h-full object-cover" />
             </div>
+            <span className="font-extrabold text-[#171901] text-xl tracking-tight">Zapella</span>
+          </Link>
+        </div>
 
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Sua Senha</label>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full mt-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs py-3 px-4 rounded-xl shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 group"
-            >
-              {loading ? (
-                <span>Acessando...</span>
-              ) : (
-                <>
-                  <span>{isRegister ? 'Criar Conta e Configurar Bot' : 'Acessar Painel do Cliente'}</span>
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </>
-              )}
-            </button>
-          </form>
-
-          <div className="mt-6 pt-4 border-t border-slate-800 text-center">
-            <p className="text-[11px] text-slate-500">
-              Plataforma protegida com criptografia de ponta a ponta.
+        <div className="w-full max-w-md">
+          <div className="mb-6">
+            <h1 className="text-2xl font-extrabold text-[#171901] tracking-tight">
+              {isRegister ? 'Criar nova conta' : 'Acessar minha conta'}
+            </h1>
+            <p className="text-xs text-[#4D4D61] mt-1">
+              {isRegister ? 'Comece gratuitamente por 7 dias, sem cartão.' : 'Bem-vindo de volta à Zapella.'}
             </p>
           </div>
+
+          <div className="bg-white rounded-2xl shadow-sm border border-[#E0E3E1] p-6 sm:p-8 space-y-5">
+
+            {/* Tab Switcher */}
+            <div className="flex bg-[#F4F5F4] p-1 rounded-xl border border-[#E0E3E1]">
+              <button
+                type="button"
+                onClick={() => setIsRegister(false)}
+                className="flex-1 py-2 text-xs font-semibold rounded-lg transition-all"
+                style={!isRegister
+                  ? { background: 'linear-gradient(135deg, #00E676 0%, #1DE9B6 100%)', color: '#171901', boxShadow: '0 2px 8px rgba(0,230,118,0.20)' }
+                  : { color: '#4D4D61' }
+                }
+              >
+                Entrar
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsRegister(true)}
+                className="flex-1 py-2 text-xs font-semibold rounded-lg transition-all"
+                style={isRegister
+                  ? { background: 'linear-gradient(135deg, #00E676 0%, #1DE9B6 100%)', color: '#171901', boxShadow: '0 2px 8px rgba(0,230,118,0.20)' }
+                  : { color: '#4D4D61' }
+                }
+              >
+                Cadastrar
+              </button>
+            </div>
+
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              {errorMsg && (
+                <div className="p-3.5 rounded-xl text-xs flex items-center gap-2"
+                     style={{ background: 'rgba(255,82,82,0.08)', border: '1px solid rgba(255,82,82,0.25)', color: '#FF5252' }}>
+                  <span>{errorMsg}</span>
+                </div>
+              )}
+
+              {successMsg && (
+                <div className="p-3.5 rounded-xl text-xs flex items-center gap-2"
+                     style={{ background: 'rgba(0,230,118,0.08)', border: '1px solid rgba(0,230,118,0.25)', color: '#2E7D5A' }}>
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  <span>{successMsg}</span>
+                </div>
+              )}
+
+              {isRegister && (
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold text-[#171901] mb-1">Seu Nome Completo</label>
+                    <div className="relative">
+                      <User className="w-4 h-4 text-[#4D4D61] absolute left-3 top-3" />
+                      <input type="text" required value={fullName} onChange={e => setFullName(e.target.value)}
+                        placeholder="Ex: Ana Maria Silva" className={inputClass} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-[#171901] mb-1">Nome da sua Empresa / Loja</label>
+                    <div className="relative">
+                      <Building className="w-4 h-4 text-[#4D4D61] absolute left-3 top-3" />
+                      <input type="text" required value={companyName} onChange={e => setCompanyName(e.target.value)}
+                        placeholder="Ex: Minha Empresa" className={inputClass} />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-[#171901] mb-1">E-mail</label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-[#4D4D61] absolute left-3 top-3" />
+                  <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
+                    placeholder="seuemail@empresa.com" className={inputClass} />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#171901] mb-1">Senha</label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-[#4D4D61] absolute left-3 top-3" />
+                  <input type="password" required value={password} onChange={e => setPassword(e.target.value)}
+                    placeholder="••••••••" className={inputClass} />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full mt-2 text-[#171901] font-bold text-xs py-3 px-4 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 group hover:opacity-90 active:scale-98 disabled:opacity-60"
+                style={{ background: 'linear-gradient(135deg, #00E676 0%, #1DE9B6 100%)', boxShadow: '0 4px 16px rgba(0,230,118,0.25)' }}
+              >
+                {loading ? (
+                  <span>Carregando...</span>
+                ) : (
+                  <>
+                    <span>{isRegister ? 'Criar Conta na Zapella' : 'Acessar Painel'}</span>
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </>
+                )}
+              </button>
+            </form>
+
+            <div className="pt-4 border-t border-[#E0E3E1] text-center">
+              <div className="flex items-center justify-center gap-1.5 text-[10px] text-[#4D4D61]">
+                <ShieldCheck className="w-3.5 h-3.5" style={{ color: '#00E676' }} />
+                <span>Plataforma protegida com criptografia de ponta a ponta.</span>
+              </div>
+            </div>
+          </div>
+
+          <p className="text-center text-xs text-[#4D4D61] mt-4">
+            <Link href="/" className="hover:text-[#171901] transition-colors">← Voltar para o site</Link>
+          </p>
         </div>
       </div>
     </div>

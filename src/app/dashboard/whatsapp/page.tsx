@@ -133,7 +133,7 @@ export default function WhatsAppConnectionPage() {
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-4">
             <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-md ${
-              status === 'connected' ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400'
+              status === 'connected' ? 'bg-[#00E676] text-white' : 'bg-slate-100 text-slate-400'
             }`}>
               <Smartphone className="w-7 h-7" />
             </div>
@@ -148,7 +148,7 @@ export default function WhatsAppConnectionPage() {
                   </span>
                 ) : status === 'connected' ? (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span className="w-2 h-2 rounded-full bg-[#00E676] animate-pulse"></span>
                     Online & Operando
                   </span>
                 ) : status === 'connecting' ? (
@@ -186,7 +186,7 @@ export default function WhatsAppConnectionPage() {
                 <button
                   onClick={() => handleConnect(false)}
                   disabled={isConnecting}
-                  className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-all flex items-center gap-2"
+                  className="px-4 py-2.5 rounded-xl bg-[#00E676] hover:bg-[#43A047] text-[#171901] text-xs font-semibold shadow-sm transition-all flex items-center gap-2"
                 >
                   <RefreshCw className={`w-4 h-4 ${isConnecting ? 'animate-spin' : ''}`} />
                   <span>Gerar QR Code</span>
@@ -198,7 +198,7 @@ export default function WhatsAppConnectionPage() {
                     placeholder="DDD + Número (ex: 11999999999)"
                     value={phoneInput}
                     onChange={(e) => setPhoneInput(e.target.value)}
-                    className="px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-800 w-52 focus:outline-none focus:border-emerald-500 font-mono"
+                    className="px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-800 w-52 focus:outline-none focus:border-[#00E676] font-mono"
                   />
                   <button
                     onClick={() => handleConnect(true)}
@@ -225,21 +225,21 @@ export default function WhatsAppConnectionPage() {
                     <img
                       src={profilePicUrl}
                       alt={profileName || 'WhatsApp'}
-                      className="w-20 h-20 rounded-full object-cover border-2 border-emerald-500 shadow-md"
+                      className="w-20 h-20 rounded-full object-cover border-2 border-[#00E676] shadow-md"
                     />
                   ) : (
-                    <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600 border border-emerald-200 shadow-inner">
+                    <div className="w-20 h-20 bg-[#F4F5F4] rounded-full flex items-center justify-center text-[#2E7D5A] border border-emerald-200 shadow-inner">
                       <CheckCircle2 className="w-10 h-10" />
                     </div>
                   )}
-                  <span className="absolute bottom-0 right-0 w-5 h-5 bg-emerald-500 border-2 border-white rounded-full flex items-center justify-center shadow">
+                  <span className="absolute bottom-0 right-0 w-5 h-5 bg-[#00E676] border-2 border-white rounded-full flex items-center justify-center shadow">
                     <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
                   </span>
                 </div>
 
                 <div className="space-y-1.5">
                   <h4 className="font-bold text-slate-900 text-base">{profileName || 'WhatsApp Conectado'}</h4>
-                  <div className="inline-block bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-mono font-bold px-3 py-1 rounded-full shadow-sm">
+                  <div className="inline-block bg-[#F4F5F4] border border-emerald-200 text-emerald-800 text-xs font-mono font-bold px-3 py-1 rounded-full shadow-sm">
                     {phone}
                   </div>
                   <p className="text-xs text-slate-500 mt-2 max-w-xs mx-auto">
@@ -249,12 +249,12 @@ export default function WhatsAppConnectionPage() {
               </div>
             ) : qrCodeImg ? (
               <div className="space-y-4 py-4">
-                <div className="p-3 bg-white rounded-2xl border-2 border-emerald-500 shadow-lg inline-block">
+                <div className="p-3 bg-white rounded-2xl border-2 border-[#00E676] shadow-lg inline-block">
                   <img src={qrCodeImg} alt="QR Code WhatsApp" className="w-56 h-56 object-contain" />
                 </div>
 
                 <div>
-                  <p className="text-xs font-bold text-emerald-700">QR Code Prontinho!</p>
+                  <p className="text-xs font-bold text-[#2E7D5A]">QR Code Prontinho!</p>
                   <p className="text-[11px] text-slate-500 mt-0.5">Abra seu WhatsApp &gt; Dispositivos Conectados e escaneie a imagem acima.</p>
                 </div>
 
@@ -283,13 +283,13 @@ export default function WhatsAppConnectionPage() {
           {/* Instructions Step-by-Step */}
           <div className="md:col-span-7 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5">
             <div className="flex items-center gap-2 text-slate-900 font-semibold text-sm pb-3 border-b border-slate-100">
-              <HelpCircle className="w-4 h-4 text-emerald-600" />
+              <HelpCircle className="w-4 h-4 text-[#2E7D5A]" />
               <span>Como conectar o WhatsApp da sua empresa</span>
             </div>
 
             <ol className="space-y-4">
               <li className="flex items-start gap-3">
-                <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">1</span>
+                <span className="w-6 h-6 rounded-full bg-emerald-100 text-[#2E7D5A] font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">1</span>
                 <div>
                   <p className="text-xs font-semibold text-slate-900">Abra o aplicativo WhatsApp no seu celular</p>
                   <p className="text-[11px] text-slate-500">Utilize preferencialmente a versão WhatsApp Business do seu número comercial.</p>
@@ -297,7 +297,7 @@ export default function WhatsAppConnectionPage() {
               </li>
 
               <li className="flex items-start gap-3">
-                <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">2</span>
+                <span className="w-6 h-6 rounded-full bg-emerald-100 text-[#2E7D5A] font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">2</span>
                 <div>
                   <p className="text-xs font-semibold text-slate-900">Acesse o menu de Dispositivos Conectados</p>
                   <p className="text-[11px] text-slate-500">No Android: Toque nos 3 pontos verticais &gt; <strong>Dispositivos conectados</strong>. No iPhone: Ajustes &gt; <strong>Dispositivos conectados</strong>.</p>
@@ -305,7 +305,7 @@ export default function WhatsAppConnectionPage() {
               </li>
 
               <li className="flex items-start gap-3">
-                <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">3</span>
+                <span className="w-6 h-6 rounded-full bg-emerald-100 text-[#2E7D5A] font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">3</span>
                 <div>
                   <p className="text-xs font-semibold text-slate-900">Toque em "Conectar um dispositivo"</p>
                   <p className="text-[11px] text-slate-500">Aponte a câmera do seu celular para o QR Code gerado nesta tela.</p>
@@ -313,8 +313,8 @@ export default function WhatsAppConnectionPage() {
               </li>
             </ol>
 
-            <div className="p-3.5 bg-emerald-50/50 rounded-xl border border-emerald-100 text-xs text-slate-600 flex items-start gap-2.5">
-              <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+            <div className="p-3.5 bg-[#F4F5F4]/50 rounded-xl border border-emerald-100 text-xs text-slate-600 flex items-start gap-2.5">
+              <ShieldCheck className="w-4 h-4 text-[#2E7D5A] shrink-0 mt-0.5" />
               <p className="text-[11px] leading-relaxed text-emerald-900">
                 <strong>Conexão Protegida:</strong> Suas conversas utilizam criptografia de ponta a ponta e integração segura com a API do WhatsApp.
               </p>

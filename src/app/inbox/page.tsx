@@ -322,12 +322,12 @@ export default function UnifiedInboxPage() {
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">
+            <div className="w-8 h-8 rounded-lg bg-[#00E676]/20 text-[#00E676] flex items-center justify-center font-bold text-xs">
               <MessageSquare className="w-4 h-4" />
             </div>
             <div>
               <h1 className="text-sm font-bold text-white leading-tight">Caixa de Entrada Unificada (Inbox)</h1>
-              <p className="text-[10px] text-emerald-400">Supervisão & Atendimento Humano Multiatendente</p>
+              <p className="text-[10px] text-[#00E676]">Supervisão & Atendimento Humano Multiatendente</p>
             </div>
           </div>
         </div>
@@ -337,7 +337,7 @@ export default function UnifiedInboxPage() {
             onClick={handleSimulateCustomerMessage}
             className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 flex items-center gap-1.5 transition-all"
           >
-            <PlusCircle className="w-3.5 h-3.5 text-emerald-400" />
+            <PlusCircle className="w-3.5 h-3.5 text-[#00E676]" />
             <span>Simular Mensagem do Cliente</span>
           </button>
 
@@ -365,7 +365,7 @@ export default function UnifiedInboxPage() {
                 value={searchFilter}
                 onChange={(e) => setSearchFilter(e.target.value)}
                 placeholder="Buscar por nome ou WhatsApp..."
-                className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#00E676]"
               />
             </div>
 
@@ -381,7 +381,7 @@ export default function UnifiedInboxPage() {
                   key={tab.id}
                   onClick={() => setStatusFilter(tab.id)}
                   className={`flex-1 py-1 text-[10px] font-semibold rounded transition-all ${
-                    statusFilter === tab.id ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                    statusFilter === tab.id ? 'bg-[#00E676] text-white' : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
                   {tab.label}
@@ -414,7 +414,7 @@ export default function UnifiedInboxPage() {
                   key={conv.id}
                   onClick={() => setActiveConvId(conv.id)}
                   className={`p-3.5 cursor-pointer transition-all hover:bg-slate-900/80 relative ${
-                    isActive ? 'bg-slate-900 border-l-4 border-emerald-500' : ''
+                    isActive ? 'bg-slate-900 border-l-4 border-[#00E676]' : ''
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2 mb-1">
@@ -435,7 +435,7 @@ export default function UnifiedInboxPage() {
                           ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse'
                           : isHuman
                           ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
-                          : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                          : 'bg-[#00E676]/20 text-emerald-300 border border-[#00E676]/40'
                       }`}>
                         {isWaiting ? 'Aguardando Atendente' : isHuman ? 'Atendimento Humano' : 'Bot Operando'}
                       </span>
@@ -476,7 +476,7 @@ export default function UnifiedInboxPage() {
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 shadow ${
                   activeConv.status === 'bot_active'
                     ? 'bg-amber-600 hover:bg-amber-500 text-white'
-                    : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                    : 'bg-[#00E676] hover:bg-[#1DE9B6] text-white'
                 }`}
               >
                 {activeConv.status === 'bot_active' ? (
@@ -532,10 +532,10 @@ export default function UnifiedInboxPage() {
 
           {/* AI Response Suggestion Box */}
           {aiSuggestion && (
-            <div className="mx-4 mb-2 p-3 bg-slate-900 border border-emerald-500/40 rounded-xl shadow-lg animate-in slide-in-from-bottom-2 duration-150">
+            <div className="mx-4 mb-2 p-3 bg-slate-900 border border-[#00E676]/40 rounded-xl shadow-lg animate-in slide-in-from-bottom-2 duration-150">
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="text-[11px] font-bold text-[#00E676] uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-[#00E676]" />
                   Sugestão de Resposta da IA (Base de Conhecimento)
                 </span>
                 <button
@@ -553,7 +553,7 @@ export default function UnifiedInboxPage() {
               <div className="flex items-center gap-2 mt-2">
                 <button
                   onClick={() => handleSendOperatorMessage(aiSuggestion)}
-                  className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-lg transition-all flex items-center gap-1"
+                  className="px-3 py-1 bg-[#00E676] hover:bg-[#1DE9B6] text-white font-semibold text-xs rounded-lg transition-all flex items-center gap-1"
                 >
                   <Check className="w-3.5 h-3.5" />
                   <span>Usar Esta Resposta</span>
@@ -590,12 +590,12 @@ export default function UnifiedInboxPage() {
                     ? 'Bot operando. Digite para enviar mensagem como operador e assumir...'
                     : 'Digite como operador do WhatsApp...'
                 }
-                className="flex-1 bg-slate-900 text-white text-xs px-4 py-3 rounded-xl border border-slate-800 focus:outline-none focus:border-emerald-500 placeholder-slate-500"
+                className="flex-1 bg-slate-900 text-white text-xs px-4 py-3 rounded-xl border border-slate-800 focus:outline-none focus:border-[#00E676] placeholder-slate-500"
               />
               <button
                 type="submit"
                 disabled={!messageInput.trim()}
-                className="px-4 py-3 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold text-xs rounded-xl shadow transition-all flex items-center gap-1.5"
+                className="px-4 py-3 bg-[#00E676] hover:bg-[#1DE9B6] disabled:opacity-50 text-white font-semibold text-xs rounded-xl shadow transition-all flex items-center gap-1.5"
               >
                 <Send className="w-4 h-4" />
                 <span>Enviar</span>
@@ -620,7 +620,7 @@ export default function UnifiedInboxPage() {
 
             <div>
               <p className="text-[11px] font-semibold text-slate-400 mb-1">WhatsApp:</p>
-              <p className="text-xs font-mono text-emerald-400">{activeConv.customer_phone}</p>
+              <p className="text-xs font-mono text-[#00E676]">{activeConv.customer_phone}</p>
             </div>
 
             {/* Tags Section */}
@@ -647,7 +647,7 @@ export default function UnifiedInboxPage() {
                   onChange={(e) => setNewTagInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleAddTag()}
                   placeholder="Nova tag..."
-                  className="flex-1 bg-slate-900 border border-slate-800 text-[11px] px-2 py-1 rounded text-white focus:outline-none focus:border-emerald-500"
+                  className="flex-1 bg-slate-900 border border-slate-800 text-[11px] px-2 py-1 rounded text-white focus:outline-none focus:border-[#00E676]"
                 />
                 <button
                   onClick={handleAddTag}
@@ -672,7 +672,7 @@ export default function UnifiedInboxPage() {
                 value={internalNoteInput}
                 onChange={(e) => setInternalNoteInput(e.target.value)}
                 placeholder="Notas visíveis apenas para a equipe (Ex: Cliente solicitou desconto de 10%)..."
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 leading-relaxed"
+                className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 focus:outline-none focus:border-[#00E676] leading-relaxed"
               />
 
               <button

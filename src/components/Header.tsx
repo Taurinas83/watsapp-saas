@@ -3,8 +3,6 @@
 import React, { useState } from 'react';
 import {
   Smartphone,
-  CheckCircle2,
-  AlertCircle,
   Play,
   LogOut,
   User,
@@ -24,67 +22,77 @@ export function Header({ title, subtitle }: HeaderProps) {
 
   return (
     <>
-      <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-20 shadow-sm">
+      <header className="h-16 bg-white border-b border-[#E0E3E1] px-6 flex items-center justify-between sticky top-0 z-20 shadow-sm">
+
         {/* Title Section */}
         <div>
-          <h1 className="text-lg font-bold text-slate-900 leading-snug">{title}</h1>
-          {subtitle && <p className="text-xs text-slate-500">{subtitle}</p>}
+          <h1 className="text-base font-bold text-[#171901] leading-snug tracking-tight">{title}</h1>
+          {subtitle && <p className="text-xs text-[#4D4D61]">{subtitle}</p>}
         </div>
 
         {/* Right Actions */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+
           {/* WhatsApp Status Badge */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-medium text-emerald-700">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border"
+               style={{ background: 'rgba(0,230,118,0.07)', borderColor: 'rgba(0,230,118,0.30)', color: '#2E7D5A' }}>
+            <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#00E676' }}></span>
+            <Smartphone className="w-3.5 h-3.5" />
             <span>WhatsApp Online</span>
           </div>
 
-          {/* WhatsApp Bot Simulator Trigger Button */}
+          {/* Simulator Button */}
           <button
             onClick={() => setIsSimulatorOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-all hover:shadow duration-150 active:scale-95"
+            className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-[#171901] text-xs font-bold shadow-sm transition-all hover:opacity-90 active:scale-95"
+            style={{ background: 'linear-gradient(135deg, #00E676 0%, #1DE9B6 100%)' }}
           >
             <Play className="w-3.5 h-3.5 fill-current" />
-            <span>Testar Atendente (Simulador)</span>
+            <span>Testar Simulador</span>
           </button>
 
           {/* Notifications */}
-          <button className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 relative">
-            <Bell className="w-4 h-4" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-500"></span>
+          <button className="p-2 rounded-xl hover:bg-[#F4F5F4] transition-colors relative">
+            <Bell className="w-4 h-4 text-[#4D4D61]" />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full" style={{ background: '#FF8F1A' }}></span>
           </button>
 
-          <div className="h-6 w-px bg-slate-200"></div>
+          <div className="h-6 w-px bg-[#E0E3E1]"></div>
 
           {/* User Profile Dropdown */}
           <div className="relative">
             <button
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-              className="flex items-center gap-2.5 p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+              className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-[#F4F5F4] transition-colors"
             >
-              <div className="w-8 h-8 rounded-full bg-slate-900 text-white font-bold flex items-center justify-center text-xs">
-                TS
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center text-[#171901] font-bold text-xs"
+                style={{ background: 'linear-gradient(135deg, #00E676 0%, #7C4DFF 100%)', color: 'white' }}
+              >
+                ZP
               </div>
               <div className="text-left hidden sm:block">
-                <p className="text-xs font-semibold text-slate-900 leading-tight">Tiago Taurian</p>
-                <p className="text-[10px] text-slate-500 font-medium">Administrador</p>
+                <p className="text-xs font-semibold text-[#171901] leading-tight">Minha Empresa</p>
+                <p className="text-[10px] text-[#4D4D61] font-medium">Administrador</p>
               </div>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+              <ChevronDown className="w-3.5 h-3.5 text-[#4D4D61]" />
             </button>
 
             {isUserMenuOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-100 py-1 z-50 animate-in fade-in-50 duration-100">
-                <div className="px-4 py-2 border-b border-slate-100">
-                  <p className="text-xs font-semibold text-slate-900">Empresa Ativa</p>
-                  <p className="text-xs text-slate-500 truncate">Minha Empresa</p>
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-[#E0E3E1] py-1 z-50">
+                <div className="px-4 py-2 border-b border-[#E0E3E1]">
+                  <p className="text-xs font-semibold text-[#171901]">Empresa Ativa</p>
+                  <p className="text-xs text-[#4D4D61] truncate">Minha Empresa</p>
                 </div>
-                <a href="/dashboard/settings" className="flex items-center gap-2 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50">
-                  <User className="w-3.5 h-3.5 text-slate-400" />
+                <a href="/dashboard/settings" className="flex items-center gap-2 px-4 py-2 text-xs text-[#4D4D61] hover:bg-[#F4F5F4]">
+                  <User className="w-3.5 h-3.5 text-[#4D4D61]" />
                   <span>Perfil & Conta</span>
                 </a>
-                <a href="/login" className="flex items-center gap-2 px-4 py-2 text-xs text-rose-600 hover:bg-rose-50 border-t border-slate-100">
-                  <LogOut className="w-3.5 h-3.5 text-rose-500" />
+                <a href="/login" className="flex items-center gap-2 px-4 py-2 text-xs border-t border-[#E0E3E1]"
+                   style={{ color: '#FF5252' }}
+                   onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#FFF5F5')}
+                   onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
+                  <LogOut className="w-3.5 h-3.5" style={{ color: '#FF5252' }} />
                   <span>Sair da conta</span>
                 </a>
               </div>
@@ -93,7 +101,6 @@ export function Header({ title, subtitle }: HeaderProps) {
         </div>
       </header>
 
-      {/* WhatsApp Simulator Drawer Modal */}
       {isSimulatorOpen && (
         <WhatsAppSimulatorModal onClose={() => setIsSimulatorOpen(false)} />
       )}

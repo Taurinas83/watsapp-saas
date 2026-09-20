@@ -75,9 +75,9 @@ export default function AttendantConfigPage() {
 
         {/* Top Notification Banner */}
         {savedSuccess && (
-          <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 px-4 py-3 rounded-xl flex items-center justify-between animate-in fade-in-50 duration-150">
+          <div className="bg-[#00E676]/10 border border-[#00E676]/30 text-[#2E7D5A] px-4 py-3 rounded-xl flex items-center justify-between animate-in fade-in-50 duration-150">
             <div className="flex items-center gap-2 text-xs font-semibold">
-              <Check className="w-4 h-4 text-emerald-600" />
+              <Check className="w-4 h-4 text-[#2E7D5A]" />
               <span>Configurações da Identidade salvas com sucesso! O prompt dinâmico foi atualizado.</span>
             </div>
           </div>
@@ -91,7 +91,7 @@ export default function AttendantConfigPage() {
             {/* Basic Identity Card */}
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
               <div className="flex items-center gap-2 text-slate-900 font-semibold text-sm pb-3 border-b border-slate-100">
-                <Bot className="w-4 h-4 text-emerald-600" />
+                <Bot className="w-4 h-4 text-[#2E7D5A]" />
                 <span>Dados do Atendente</span>
               </div>
 
@@ -102,7 +102,7 @@ export default function AttendantConfigPage() {
                   value={attendant.name}
                   onChange={(e) => setAttendant({ ...attendant, name: e.target.value })}
                   placeholder="Ex: Sofia, Lucas, Assistente Virtual"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-emerald-500 font-medium"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#00E676] font-medium"
                 />
                 <p className="text-[11px] text-slate-400 mt-1">Este é o nome com o qual a IA se apresentará para os clientes.</p>
               </div>
@@ -120,13 +120,13 @@ export default function AttendantConfigPage() {
                         onClick={() => setAttendant({ ...attendant, personality: p.id })}
                         className={`p-3 rounded-xl border text-left transition-all ${
                           isSelected
-                            ? 'bg-emerald-50/60 border-emerald-500 text-emerald-950 shadow-sm ring-1 ring-emerald-500/30'
+                            ? 'bg-[#00E676]/10 border-[#00E676] text-emerald-950 shadow-sm ring-1 ring-[#00E676]/30'
                             : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
                         }`}
                       >
                         <div className="flex items-center justify-between mb-1">
-                          <Icon className={`w-4 h-4 ${isSelected ? 'text-emerald-600' : 'text-slate-400'}`} />
-                          {isSelected && <Check className="w-3.5 h-3.5 text-emerald-600" />}
+                          <Icon className={`w-4 h-4 ${isSelected ? 'text-[#2E7D5A]' : 'text-slate-400'}`} />
+                          {isSelected && <Check className="w-3.5 h-3.5 text-[#2E7D5A]" />}
                         </div>
                         <p className="text-xs font-semibold leading-snug">{p.title}</p>
                         <p className="text-[10px] text-slate-500 mt-1 leading-normal">{p.desc}</p>
@@ -143,7 +143,7 @@ export default function AttendantConfigPage() {
                   value={attendant.voice_tone}
                   onChange={(e) => setAttendant({ ...attendant, voice_tone: e.target.value })}
                   placeholder="Ex: Atencioso, bem-humorado e objetivo"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#00E676]"
                 />
               </div>
             </div>
@@ -151,7 +151,7 @@ export default function AttendantConfigPage() {
             {/* Business Context & Custom Instructions */}
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
               <div className="flex items-center gap-2 text-slate-900 font-semibold text-sm pb-3 border-b border-slate-100">
-                <Info className="w-4 h-4 text-emerald-600" />
+                <Info className="w-4 h-4 text-[#2E7D5A]" />
                 <span>Instruções do Negócio & Conduta</span>
               </div>
 
@@ -162,7 +162,7 @@ export default function AttendantConfigPage() {
                   value={attendant.business_info}
                   onChange={(e) => setAttendant({ ...attendant, business_info: e.target.value })}
                   placeholder="Descreva o que seu negócio faz, localização e resumo dos atendimentos..."
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-emerald-500 leading-relaxed"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#00E676] leading-relaxed"
                 />
               </div>
 
@@ -173,14 +173,14 @@ export default function AttendantConfigPage() {
                   value={attendant.custom_instructions}
                   onChange={(e) => setAttendant({ ...attendant, custom_instructions: e.target.value })}
                   placeholder="Ex: NUNCA dê descontos sem autorização. Se o cliente reclamar, peça desculpas e acione o atendimento humano..."
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-emerald-500 leading-relaxed"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#00E676] leading-relaxed"
                 />
               </div>
 
               <div className="pt-2">
                 <button
                   type="submit"
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs py-3 px-4 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2"
+                  className="w-full bg-[#00E676] hover:bg-[#43A047] text-[#171901] font-semibold text-xs py-3 px-4 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2"
                 >
                   <Save className="w-4 h-4" />
                   <span>Salvar Configurações da Identidade</span>
@@ -195,8 +195,8 @@ export default function AttendantConfigPage() {
             <div className="bg-slate-900 text-slate-200 p-6 rounded-2xl border border-slate-800 shadow-xl flex flex-col h-full">
               <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
                 <div className="flex items-center gap-2">
-                  <Terminal className="w-4 h-4 text-emerald-400" />
-                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">Prompt do Sistema (Claude IA)</span>
+                  <Terminal className="w-4 h-4 text-[#00E676]" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#00E676]">Prompt do Sistema (Claude IA)</span>
                 </div>
                 <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded font-mono">Gerado Dinamicamente</span>
               </div>

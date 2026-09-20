@@ -2,8 +2,12 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Atendente Virtual WhatsApp SaaS',
-  description: 'Plataforma SaaS de atendente virtual inteligente via WhatsApp para pequenos negócios',
+  title: 'Zapella — Secretária Virtual Inteligente para WhatsApp',
+  description: 'Automatize o atendimento da sua empresa com a Zapella. IA conversacional humanizada via WhatsApp, com supervisão em tempo real e base de conhecimento personalizada.',
+  icons: {
+    icon: '/favicon.png',
+    apple: '/favicon.png',
+  },
 };
 
 export default function RootLayout({
