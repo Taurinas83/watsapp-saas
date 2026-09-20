@@ -15,10 +15,12 @@ import {
   UserCheck,
   Building2,
   Sparkles,
-  Zap
+  Zap,
+  ShieldCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getCurrentUserOrganizationId, fetchMonthlyUsage } from '@/lib/supabase/actions';
+import { getSuperAdminProfile } from '@/lib/admin/actions';
 
 interface NavProps {
   userRole?: 'admin' | 'operator';
@@ -26,6 +28,7 @@ interface NavProps {
 
 export function Navigation({ userRole = 'admin' }: NavProps) {
   const pathname = usePathname();
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [usage, setUsage] = useState<{ count: number; limit: number; planTier: string }>({
     count: 0,
     limit: 1000,
@@ -38,6 +41,14 @@ export function Navigation({ userRole = 'admin' }: NavProps) {
       if (orgId) {
         const data = await fetchMonthlyUsage(orgId);
         setUsage(data);
+      }
+      try {
+        const admin = await getSuperAdminProfile();
+        if (admin?.is_super_admin) {
+          setIsSuperAdmin(true);
+        }
+      } catch (e) {
+        // Not super admin
       }
     }
     loadUsage();
@@ -253,6 +264,24 @@ export function Navigation({ userRole = 'admin' }: NavProps) {
           )}
         </div>
       </div>
+
+      {/* Super Admin Access Button (Only visible to platform super admins) */}
+      {isSuperAdmin && (
+        <div className="p-3 border-t border-[#E0E3E1] bg-white">
+          <Link
+            href="/admin/overview"
+            className="flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold text-[#128C7E] bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-all shadow-xs group"
+          >
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-[#128C7E]" strokeWidth={1.75} />
+              <span className="text-[#111B21] font-bold">Painel Super Admin</span>
+            </div>
+            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#128C7E] text-white tracking-wider uppercase">
+              GOD
+            </span>
+          </Link>
+        </div>
+      )}
 
       {/* Footer / User Info */}
       <div className="p-3 border-t border-[#E0E3E1]">

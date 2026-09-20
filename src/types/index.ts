@@ -10,6 +10,10 @@ export type SenderType = 'customer' | 'bot' | 'operator';
 
 export type UserRole = 'admin' | 'operator';
 
+export type AdminRole = 'super_admin' | 'support' | 'finance';
+
+export type OrganizationStatus = 'active' | 'suspended' | 'trialing' | 'canceled';
+
 export interface Organization {
   id: string;
   name: string;
@@ -18,6 +22,11 @@ export interface Organization {
   created_at: string;
   plan_tier?: string;
   ai_model_preference?: string;
+  status?: OrganizationStatus;
+  suspended_reason?: string;
+  custom_mrr?: number;
+  billing_cycle?: string;
+  settings?: Record<string, any>;
 }
 
 export interface Profile {
@@ -27,6 +36,43 @@ export interface Profile {
   email: string;
   role: UserRole;
   avatar_url?: string;
+  is_super_admin?: boolean;
+  admin_role?: AdminRole;
+}
+
+export interface AdminAuditLog {
+  id: string;
+  admin_id: string;
+  admin_name?: string;
+  admin_email?: string;
+  action: string;
+  target_type: string;
+  target_id: string;
+  details: Record<string, any>;
+  ip_address?: string;
+  user_agent?: string;
+  created_at: string;
+}
+
+export interface Invoice {
+  id: string;
+  organization_id: string;
+  organization_name?: string;
+  amount: number;
+  status: 'paid' | 'pending' | 'overdue' | 'canceled';
+  gateway: string;
+  gateway_invoice_id?: string;
+  invoice_url?: string;
+  due_date: string;
+  paid_at?: string;
+  created_at: string;
+}
+
+export interface PlatformSetting {
+  key: string;
+  value: any;
+  updated_by?: string;
+  updated_at: string;
 }
 
 export interface Attendant {

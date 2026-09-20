@@ -1,5 +1,6 @@
 import React from 'react';
 import { Navigation } from '@/components/Navigation';
+import { ImpersonationBanner } from '@/components/admin/ImpersonationBanner';
 
 export default function DashboardLayout({
   children,
@@ -13,6 +14,7 @@ export default function DashboardLayout({
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
+        <ImpersonationBanner />
         <main className="flex-1 pb-12">
           {children}
         </main>
