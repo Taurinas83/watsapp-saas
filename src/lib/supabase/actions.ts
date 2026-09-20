@@ -207,3 +207,32 @@ export async function insertMessage(
 
   return msgData as Message;
 }
+
+/**
+ * CONFIGURAÇÕES: Buscar configurações gerais da organização
+ */
+export async function fetchOrganizationSettings(organizationId: string): Promise<any | null> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('organizations')
+    .select('settings')
+    .eq('id', organizationId)
+    .single();
+
+  if (error || !data) return null;
+  return data.settings || null;
+}
+
+/**
+ * CONFIGURAÇÕES: Atualizar configurações gerais da organização
+ */
+export async function updateOrganizationSettings(organizationId: string, settings: any): Promise<boolean> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from('organizations')
+    .update({ settings })
+    .eq('id', organizationId);
+
+  return !error;
+}
+
