@@ -58,6 +58,9 @@ export async function updateAttendant(attendant: Partial<Attendant> & { organiza
       voice_tone: attendant.voice_tone || 'Atencioso, prestativo e eficiente',
       business_info: attendant.business_info || '',
       custom_instructions: attendant.custom_instructions || '',
+      copilot_mode: attendant.copilot_mode ?? false,
+      is_paused: attendant.is_paused ?? false,
+      handover_keywords: attendant.handover_keywords || ['atendente', 'humano', 'pessoa', 'falar com alguém'],
       updated_at: new Date().toISOString()
     }, { onConflict: 'organization_id' });
 
@@ -66,6 +69,56 @@ export async function updateAttendant(attendant: Partial<Attendant> & { organiza
   }
 
   return !error;
+}
+
+/**
+ * ATENDENTE: Pausar ou Ativar o Bot globalmente
+ */
+export async function toggleBotPause(organizationId: string, isPaused: boolean): Promise<boolean> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from('attendants')
+    .update({ is_paused: isPaused, updated_at: new Date().toISOString() })
+    .eq('organization_id', organizationId);
+
+  if (error) {
+    console.error('Erro ao alternar pausa do bot:', error);
+  }
+  return !error;
+}
+
+/**
+ * USO / CRÉDITOS: Buscar contagem de mensagens do mês e limite do plano
+ */
+export async function fetchMonthlyUsage(organizationId: string): Promise<{ count: number; limit: number; planTier: string }> {
+  const supabase = createClient();
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+
+  // Buscar plano da organização
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('plan_tier')
+    .eq('id', organizationId)
+    .single();
+
+  const planTier = org?.plan_tier || 'starter';
+  const limit = planTier === 'starter' ? 1000 : Infinity;
+
+  // Contar mensagens enviadas pelo bot no mês corrente
+  const { count } = await supabase
+    .from('messages')
+    .select('*', { count: 'exact', head: true })
+    .eq('organization_id', organizationId)
+    .eq('sender_type', 'bot')
+    .gte('created_at', startOfMonth.toISOString());
+
+  return {
+    count: count || 0,
+    limit,
+    planTier
+  };
 }
 
 /**

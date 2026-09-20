@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
-import { Clock, Bell, Save, Check, Mail, Smartphone, Loader2 } from 'lucide-react';
+import { Clock, Bell, Save, Check, Mail, Smartphone, Loader2, User, Building2, ShieldCheck } from 'lucide-react';
 import { getCurrentUserOrganizationId, fetchOrganizationSettings, updateOrganizationSettings } from '@/lib/supabase/actions';
+import { createClient } from '@/lib/supabase/client';
 import { DEFAULT_ORG_ID } from '@/lib/constants';
 
 interface ScheduleDay {
@@ -25,10 +26,19 @@ const defaultSchedule: ScheduleDay[] = [
 
 export default function GeneralSettingsPage() {
   const [orgId, setOrgId] = useState<string>(DEFAULT_ORG_ID);
+  const [userId, setUserId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [profileSuccess, setProfileSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Profile State
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [planTier, setPlanTier] = useState('starter');
 
   // Business Hours State
   const [schedule, setSchedule] = useState<ScheduleDay[]>(defaultSchedule);
@@ -47,6 +57,27 @@ export default function GeneralSettingsPage() {
         const currentOrgId = await getCurrentUserOrganizationId();
         setOrgId(currentOrgId);
 
+        const supabase = createClient();
+
+        // Carregar usuário logado e perfil
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          setUserId(user.id);
+          setEmail(user.email || '');
+          const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+          if (profile) {
+            setFullName(profile.full_name || '');
+          }
+        }
+
+        // Carregar organização
+        const { data: org } = await supabase.from('organizations').select('name, plan_tier').eq('id', currentOrgId).single();
+        if (org) {
+          setCompanyName(org.name || '');
+          setPlanTier(org.plan_tier || 'starter');
+        }
+
+        // Carregar configurações de horário e notificações
         const data = await fetchOrganizationSettings(currentOrgId);
         if (data) {
           if (data.schedule && Array.isArray(data.schedule)) {
@@ -71,6 +102,28 @@ export default function GeneralSettingsPage() {
 
     loadSettings();
   }, []);
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingProfile(true);
+    setProfileSuccess(false);
+
+    try {
+      const supabase = createClient();
+      if (userId) {
+        await supabase.from('profiles').update({ full_name: fullName }).eq('id', userId);
+      }
+      if (orgId) {
+        await supabase.from('organizations').update({ name: companyName }).eq('id', orgId);
+      }
+      setProfileSuccess(true);
+      setTimeout(() => setProfileSuccess(false), 3000);
+    } catch (err: any) {
+      console.error('Erro ao salvar perfil:', err);
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
 
   // Salvar no Supabase
   const handleSave = async (e: React.FormEvent) => {
@@ -130,7 +183,88 @@ export default function GeneralSettingsPage() {
             <p className="text-xs text-[#4D4D61]">Carregando configurações da empresa...</p>
           </div>
         ) : (
-          <form onSubmit={handleSave} className="space-y-6">
+          <div className="space-y-6">
+            {/* Profile & Account Card */}
+        <div className="bg-white p-6 rounded-2xl border border-[#E0E3E1] shadow-sm space-y-4">
+          <div className="flex items-center gap-2 text-[#171901] font-bold text-sm pb-3 border-b border-[#E0E3E1]">
+            <User className="w-4 h-4" style={{ color: '#2E7D5A' }} />
+            <span>Meu Perfil & Dados da Conta</span>
+          </div>
+
+          {profileSuccess && (
+            <div className="bg-[#F4F5F4] border border-[#00E676] text-[#2E7D5A] px-4 py-2.5 rounded-xl flex items-center gap-2 text-xs font-semibold animate-in fade-in-50">
+              <Check className="w-4 h-4 text-[#00E676]" />
+              <span>Dados do perfil atualizados com sucesso!</span>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-[#171901] mb-1">Seu Nome Completo</label>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Ex: Tiago Taurian"
+                className="w-full bg-[#F4F5F4] border border-[#E0E3E1] rounded-xl px-3.5 py-2.5 text-xs text-[#171901] focus:outline-none focus:border-[#00E676]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-[#171901] mb-1">Nome da Empresa / Loja</label>
+              <input
+                type="text"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                placeholder="Ex: Taurians Consult"
+                className="w-full bg-[#F4F5F4] border border-[#E0E3E1] rounded-xl px-3.5 py-2.5 text-xs text-[#171901] focus:outline-none focus:border-[#00E676]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-[#171901] mb-1">E-mail de Login</label>
+              <input
+                type="email"
+                value={email}
+                disabled
+                className="w-full bg-[#F4F5F4] border border-[#E0E3E1] rounded-xl px-3.5 py-2.5 text-xs text-[#4D4D61] cursor-not-allowed opacity-80"
+              />
+              <p className="text-[10px] text-[#4D4D61] mt-1">E-mail autenticado via Supabase Auth.</p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-[#171901] mb-1">Plano Atual</label>
+              <div className="flex items-center justify-between p-2.5 bg-[#F4F5F4] border border-[#E0E3E1] rounded-xl">
+                <span className="text-xs font-extrabold capitalize text-[#2E7D5A]">
+                  Plano {planTier}
+                </span>
+                <a
+                  href="https://www.asaas.com/c/ukq2r3jczggrhibc"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[10px] font-bold px-3 py-1.5 rounded-lg text-[#171901] transition-all hover:opacity-90 shadow-sm"
+                  style={{ background: 'linear-gradient(135deg, #00E676 0%, #1DE9B6 100%)' }}
+                >
+                  {planTier === 'starter' ? '⚡ Fazer Upgrade (Pro)' : 'Gerenciar Assinatura'}
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button
+              type="button"
+              onClick={handleSaveProfile}
+              disabled={isSavingProfile}
+              className="px-5 py-2.5 rounded-xl bg-[#171901] hover:bg-[#4D4D61] text-white text-xs font-bold transition-all shadow-sm flex items-center gap-2"
+            >
+              <Save className="w-3.5 h-3.5" />
+              <span>{isSavingProfile ? 'Salvando Perfil...' : 'Salvar Dados do Perfil'}</span>
+            </button>
+          </div>
+        </div>
+
+        <form onSubmit={handleSave} className="space-y-6">
 
             {/* Operating Hours Card */}
             <div className="bg-white p-6 rounded-2xl border border-[#E0E3E1] shadow-sm space-y-4">
@@ -273,6 +407,7 @@ export default function GeneralSettingsPage() {
             </div>
 
           </form>
+          </div>
         )}
 
       </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
@@ -13,9 +13,12 @@ import {
   Settings,
   MessageSquare,
   UserCheck,
-  Building2
+  Building2,
+  Sparkles,
+  Zap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getCurrentUserOrganizationId, fetchMonthlyUsage } from '@/lib/supabase/actions';
 
 interface NavProps {
   userRole?: 'admin' | 'operator';
@@ -23,6 +26,22 @@ interface NavProps {
 
 export function Navigation({ userRole = 'admin' }: NavProps) {
   const pathname = usePathname();
+  const [usage, setUsage] = useState<{ count: number; limit: number; planTier: string }>({
+    count: 0,
+    limit: 1000,
+    planTier: 'starter'
+  });
+
+  useEffect(() => {
+    async function loadUsage() {
+      const orgId = await getCurrentUserOrganizationId();
+      if (orgId) {
+        const data = await fetchMonthlyUsage(orgId);
+        setUsage(data);
+      }
+    }
+    loadUsage();
+  }, []);
 
   const clientPanelItems = [
     {
@@ -192,6 +211,49 @@ export function Navigation({ userRole = 'admin' }: NavProps) {
         </div>
       </div>
 
+      {/* Usage / Plan Limits Block */}
+      <div className="p-3 border-t border-[#E0E3E1] space-y-2 bg-white">
+        <div className="p-3 rounded-2xl bg-[#F4F5F4] border border-[#E0E3E1] space-y-2">
+          <div className="flex items-center justify-between text-[11px]">
+            <span className="font-bold text-[#171901]">Consumo de Mensagens</span>
+            <span className="font-bold text-[#2E7D5A]">
+              {usage.planTier === 'starter' ? `${usage.count} / ${usage.limit}` : `${usage.count} msgs`}
+            </span>
+          </div>
+
+          {usage.planTier === 'starter' ? (
+            <>
+              <div className="w-full bg-[#E0E3E1] rounded-full h-1.5 overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-300"
+                  style={{
+                    width: `${Math.min(100, Math.round((usage.count / usage.limit) * 100))}%`,
+                    background: (usage.count / usage.limit) > 0.85 ? '#FF5252' : '#00E676'
+                  }}
+                />
+              </div>
+
+              <div className="pt-1">
+                <a
+                  href="https://www.asaas.com/c/ukq2r3jczggrhibc"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full py-1.5 px-2 text-center text-[10px] font-extrabold rounded-xl text-[#171901] transition-all hover:opacity-90 shadow-sm"
+                  style={{ background: 'linear-gradient(135deg, #00E676 0%, #1DE9B6 100%)' }}
+                >
+                  ⚡ Fazer Upgrade (Ilimitado)
+                </a>
+              </div>
+            </>
+          ) : (
+            <div className="flex items-center gap-1.5 text-[10px] text-[#2E7D5A] font-semibold">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#00E676] animate-pulse"></span>
+              <span>Mensagens Ilimitadas ({usage.planTier.toUpperCase()})</span>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Footer / User Info */}
       <div className="p-3 border-t border-[#E0E3E1]">
         <div className="flex items-center gap-3 p-2.5 rounded-xl bg-[#F4F5F4]">
@@ -203,7 +265,9 @@ export function Navigation({ userRole = 'admin' }: NavProps) {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-semibold text-[#171901] truncate">Minha Empresa</p>
-            <p className="text-[10px] text-[#4D4D61] truncate">Plano Pro · Ativo</p>
+            <p className="text-[10px] text-[#4D4D61] truncate capitalize">
+              Plano {usage.planTier} • Ativo
+            </p>
           </div>
         </div>
       </div>

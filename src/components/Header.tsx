@@ -1,15 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Smartphone,
-  Play,
   LogOut,
   User,
   ChevronDown,
   Bell
 } from 'lucide-react';
-import { WhatsAppSimulatorModal } from './WhatsAppSimulatorModal';
+import { getCurrentUserOrganizationId, fetchAttendant, toggleBotPause } from '@/lib/supabase/actions';
 
 interface HeaderProps {
   title: string;
@@ -17,8 +16,29 @@ interface HeaderProps {
 }
 
 export function Header({ title, subtitle }: HeaderProps) {
-  const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [orgId, setOrgId] = useState('');
+
+  useEffect(() => {
+    async function loadBotStatus() {
+      const currentOrgId = await getCurrentUserOrganizationId();
+      setOrgId(currentOrgId);
+      const attendant = await fetchAttendant(currentOrgId);
+      if (attendant) {
+        setIsPaused(attendant.is_paused || false);
+      }
+    }
+    loadBotStatus();
+  }, []);
+
+  const handleTogglePause = async () => {
+    const nextState = !isPaused;
+    setIsPaused(nextState);
+    if (orgId) {
+      await toggleBotPause(orgId, nextState);
+    }
+  };
 
   return (
     <>
@@ -33,6 +53,23 @@ export function Header({ title, subtitle }: HeaderProps) {
         {/* Right Actions */}
         <div className="flex items-center gap-3">
 
+          {/* Bot Status Switch (Ativo / Pausado) */}
+          <button
+            onClick={handleTogglePause}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all cursor-pointer shadow-sm hover:opacity-90 active:scale-95"
+            style={isPaused
+              ? { background: 'rgba(255, 143, 26, 0.12)', borderColor: 'rgba(255, 143, 26, 0.40)', color: '#D97706' }
+              : { background: 'rgba(0, 230, 118, 0.12)', borderColor: 'rgba(0, 230, 118, 0.40)', color: '#2E7D5A' }
+            }
+            title={isPaused ? "Bot pausado. Clique para ativar atendimento por IA." : "Bot ativo respondendo automaticamente. Clique para pausar."}
+          >
+            <span
+              className="w-2 h-2 rounded-full"
+              style={{ background: isPaused ? '#FF8F1A' : '#00E676' }}
+            />
+            <span>{isPaused ? '⏸️ Bot Pausado' : '🟢 Bot Ativo'}</span>
+          </button>
+
           {/* WhatsApp Status Badge */}
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border"
                style={{ background: 'rgba(0,230,118,0.07)', borderColor: 'rgba(0,230,118,0.30)', color: '#2E7D5A' }}>
@@ -40,16 +77,6 @@ export function Header({ title, subtitle }: HeaderProps) {
             <Smartphone className="w-3.5 h-3.5" />
             <span>WhatsApp Online</span>
           </div>
-
-          {/* Simulator Button */}
-          <button
-            onClick={() => setIsSimulatorOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-[#171901] text-xs font-bold shadow-sm transition-all hover:opacity-90 active:scale-95"
-            style={{ background: 'linear-gradient(135deg, #00E676 0%, #1DE9B6 100%)' }}
-          >
-            <Play className="w-3.5 h-3.5 fill-current" />
-            <span>Testar Simulador</span>
-          </button>
 
           {/* Notifications */}
           <button className="p-2 rounded-xl hover:bg-[#F4F5F4] transition-colors relative">
@@ -100,10 +127,6 @@ export function Header({ title, subtitle }: HeaderProps) {
           </div>
         </div>
       </header>
-
-      {isSimulatorOpen && (
-        <WhatsAppSimulatorModal onClose={() => setIsSimulatorOpen(false)} />
-      )}
     </>
   );
 }

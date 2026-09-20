@@ -40,8 +40,20 @@ export default function AttendantConfigPage() {
     setTimeout(() => setSavedSuccess(false), 3000);
   };
 
+  const [newKeyword, setNewKeyword] = useState('');
+
+  const handleAddKeyword = () => {
+    const trimmed = newKeyword.trim();
+    if (!trimmed) return;
+    const current = attendant.handover_keywords || [];
+    if (!current.includes(trimmed)) {
+      setAttendant({ ...attendant, handover_keywords: [...current, trimmed] });
+    }
+    setNewKeyword('');
+  };
 
   const generatedPrompt = buildSystemPrompt(attendant, []);
+
 
   const personalities: { id: PersonalityType; title: string; desc: string; icon: any }[] = [
     {
@@ -176,16 +188,101 @@ export default function AttendantConfigPage() {
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#00E676] leading-relaxed"
                 />
               </div>
+            </div>
 
-              <div className="pt-2">
+            {/* Handover & Immediate Transfer Keywords Card */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              <div className="flex items-center gap-2 text-slate-900 font-semibold text-sm pb-3 border-b border-slate-100">
+                <ShieldCheck className="w-4 h-4 text-[#2E7D5A]" />
+                <span>Palavras-chave de Transferência Imediata (Handover)</span>
+              </div>
+
+              <p className="text-xs text-slate-500">
+                Quando o cliente enviar qualquer uma destas palavras no WhatsApp, o robô pausará imediatamente e transferirá a conversa para a equipe humana no Inbox.
+              </p>
+
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-2 min-h-[42px] p-3 bg-slate-50 border border-slate-200 rounded-xl items-center">
+                  {(attendant.handover_keywords || []).map((kw, i) => (
+                    <span
+                      key={i}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-white border border-slate-200 text-slate-800 shadow-sm"
+                    >
+                      <span>{kw}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = (attendant.handover_keywords || []).filter((_, idx) => idx !== i);
+                          setAttendant({ ...attendant, handover_keywords: updated });
+                        }}
+                        className="text-slate-400 hover:text-rose-500 font-bold ml-1"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                  {(attendant.handover_keywords || []).length === 0 && (
+                    <span className="text-xs text-slate-400 italic">Nenhuma palavra cadastrada ainda.</span>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newKeyword}
+                    onChange={(e) => setNewKeyword(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddKeyword();
+                      }
+                    }}
+                    placeholder="Adicionar termo (ex: financeiro, cancelar, falar com atendente)..."
+                    className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#00E676]"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddKeyword}
+                    className="px-4 py-2.5 bg-[#171901] hover:bg-[#4D4D61] text-white text-xs font-bold rounded-xl transition-colors shrink-0"
+                  >
+                    + Adicionar
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Bot Status & Save Button */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-xl bg-slate-50 border border-slate-200">
+                <div>
+                  <p className="text-xs font-bold text-slate-900">Pausar Atendente IA Globalmente</p>
+                  <p className="text-[11px] text-slate-500">
+                    {attendant.is_paused
+                      ? '⏸️ O bot está PAUSADO. As mensagens dos clientes aguardarão atendimento humano no Inbox.'
+                      : '🟢 O bot está ATIVO e responderá a todas as mensagens com a IA.'}
+                  </p>
+                </div>
                 <button
-                  type="submit"
-                  className="w-full bg-[#00E676] hover:bg-[#43A047] text-[#171901] font-semibold text-xs py-3 px-4 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2"
+                  type="button"
+                  onClick={() => setAttendant({ ...attendant, is_paused: !attendant.is_paused })}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 shadow-sm ${
+                    attendant.is_paused
+                      ? 'bg-amber-500 hover:bg-amber-600 text-white'
+                      : 'bg-[#00E676] hover:bg-[#1DE9B6] text-[#171901]'
+                  }`}
                 >
-                  <Save className="w-4 h-4" />
-                  <span>Salvar Configurações da Identidade</span>
+                  {attendant.is_paused ? '⏸️ Bot Pausado' : '🟢 Bot Ativo'}
                 </button>
               </div>
+
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="w-full bg-[#00E676] hover:bg-[#43A047] text-[#171901] font-bold text-xs py-3.5 px-4 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                <span>{isSaving ? 'Salvando...' : 'Salvar Todas as Configurações da Identidade'}</span>
+              </button>
             </div>
 
           </form>

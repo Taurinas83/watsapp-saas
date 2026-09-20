@@ -418,6 +418,61 @@ export async function POST(req: NextRequest) {
           : initialKnowledgeItems;
         const history: Message[] = (conversationHistoryData?.data as Message[]) || [];
 
+        // ── REGRA NOVA: PAUSA GLOBAL DO BOT ──────────────────────────────
+        if (attendant.is_paused === true) {
+          console.log(`[PAUSA] Bot está pausado para org ${organizationId}. Mensagem mantida para atendimento humano.`);
+          if (conv.status === 'bot_active') {
+            await supabase.from('conversations').update({ status: 'human_active' }).eq('id', conv.id);
+          }
+          processedCount++;
+          continue;
+        }
+
+        // ── REGRA NOVA: PALAVRAS-CHAVE DE TRANSFERÊNCIA IMEDIATA ──────────
+        const customKeywords: string[] = attendant.handover_keywords || [];
+        const lowerInput = sanitizedUserText.toLowerCase();
+        const matchedKeyword = customKeywords.find(kw => kw.trim() && lowerInput.includes(kw.trim().toLowerCase()));
+        if (matchedKeyword) {
+          console.log(`[HANDOVER IMEDIATO] Palavra-chave disparada: "${matchedKeyword}"`);
+          await supabase.from('conversations').update({ status: 'waiting_human' }).eq('id', conv.id);
+          await insertMessage(
+            conv.id,
+            organizationId,
+            'bot',
+            attendant.name,
+            'Entendido! Estou transferindo seu atendimento para nossa equipe humana agora mesmo. Por favor, aguarde um instante. 😊'
+          );
+          processedCount++;
+          continue;
+        }
+
+        // ── REGRA NOVA: LIMITE DE MENSAGENS POR PLANO (STARTER: 1.000) ──────
+        if (org?.plan_tier === 'starter') {
+          const startOfMonth = new Date();
+          startOfMonth.setDate(1);
+          startOfMonth.setHours(0, 0, 0, 0);
+          const { count: monthlyBotMsgs } = await supabase
+            .from('messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('organization_id', organizationId)
+            .eq('sender_type', 'bot')
+            .gte('created_at', startOfMonth.toISOString());
+
+          if ((monthlyBotMsgs || 0) >= 1000) {
+            console.log(`[LIMITE ATINGIDO] Organização ${organizationId} atingiu o limite de 1.000 mensagens do Plano Starter.`);
+            await supabase.from('conversations').update({ status: 'waiting_human' }).eq('id', conv.id);
+            await insertMessage(
+              conv.id,
+              organizationId,
+              'bot',
+              attendant.name,
+              'Olá! Nosso limite de atendimento automatizado deste mês foi atingido. Sua mensagem foi encaminhada para a equipe humana. Aguarde um momento!'
+            );
+            processedCount++;
+            continue;
+          }
+        }
+
         // ── REGRA 21: MODO COPILOTO (HUMAN-IN-THE-LOOP) ──────────────────────
         if (attendant.copilot_mode === true) {
           const aiResult = await generateBotResponse(

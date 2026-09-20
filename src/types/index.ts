@@ -16,6 +16,8 @@ export interface Organization {
   stripe_customer_id?: string;
   stripe_subscription_status: string;
   created_at: string;
+  plan_tier?: string;
+  ai_model_preference?: string;
 }
 
 export interface Profile {
@@ -41,6 +43,8 @@ export interface Attendant {
   business_hours_end?: number;
   copilot_mode?: boolean;
   allowed_topics?: string[];
+  is_paused?: boolean;
+  handover_keywords?: string[];
   updated_at?: string;
 }
 
