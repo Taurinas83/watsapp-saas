@@ -58,7 +58,6 @@ export function getTemporalContext(attendant: Attendant): {
 } {
   const now = new Date();
   
-  // Formatador fuso horário de Brasília
   const timeFormatter = new Intl.DateTimeFormat('pt-BR', {
     timeZone: 'America/Sao_Paulo',
     hour: 'numeric',
@@ -90,55 +89,57 @@ export function getTemporalContext(attendant: Attendant): {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CONSTRUÇÃO DO SYSTEM PROMPT (REGRAS 11, 13, 19)
+// CONSTRUÇÃO DO SYSTEM PROMPT HUMANIZADO E CONVERSACIONAL (CALIBRAÇÃO PRO)
 // ─────────────────────────────────────────────────────────────────────────────
 export function buildSystemPrompt(
   attendant: Attendant,
   relevantKnowledge: KnowledgeItem[]
 ): string {
   const personalityStyles: Record<string, string> = {
-    friendly: 'Você é extremamente amigável, caloroso, simpático, usa emojis moderados com empatia e entusiasmo.',
-    professional: 'Você é profissional, educado, claro, objetivo, elegante e altamente eficiente.',
-    casual: 'Você é descontraído, moderno, fala de forma natural e leve, sem formalidades excessivas.',
+    friendly: 'Seu tom é caloroso, atencioso, empático e muito acolhedor, com uso leve e natural de emojis.',
+    professional: 'Seu tom é polido, elegante, claro, seguro e focado em gerar valor com rapidez e sofisticação.',
+    casual: 'Seu tom é descontraído, moderno, ágil e parceiro, falando de igual para igual de forma fluida.',
   };
 
-  const styleDescription = personalityStyles[attendant.personality] || personalityStyles.professional;
+  const styleDescription = personalityStyles[attendant.personality] || personalityStyles.friendly;
   const temporal = getTemporalContext(attendant);
 
   let knowledgeSection = '';
   if (relevantKnowledge.length > 0) {
-    knowledgeSection = `\n--- BASE DE CONHECIMENTO OFICIAL DISPONÍVEL ---\nUtilize PRIORITARIAMENTE as respostas e informações abaixo:\n` +
-      relevantKnowledge.map((item, idx) => `[Item ${idx + 1} - ${item.category.toUpperCase()}]\nPergunta: ${item.question}\nResposta: ${item.answer}`).join('\n\n') +
+    knowledgeSection = `\n--- BASE DE DADOS E CONHECIMENTO DISPONÍVEL ---\nUse estas informações como fonte de verdade para embasar suas respostas com naturalidade (sem copiar e colar blocos inteiros frios):\n` +
+      relevantKnowledge.map((item, idx) => `[Referência ${idx + 1} - ${item.category.toUpperCase()}]\nTópico: ${item.question}\nConteúdo Oficial: ${item.answer}`).join('\n\n') +
       `\n-----------------------------------------------\n`;
-  } else {
-    knowledgeSection = `\n--- BASE DE CONHECIMENTO ---\nNenhuma informação cadastrada para a dúvida específica. Responda educadamente e, se for algo além do básico, ofereça transferir para a equipe humana.\n`;
   }
 
   const allowedTopics = attendant.allowed_topics && attendant.allowed_topics.length > 0
     ? attendant.allowed_topics.join(', ')
-    : 'atendimento comercial, informações da empresa, dúvidas frequentes, horários, preços e agendamentos';
+    : 'atendimento comercial, informações da empresa, dúvidas frequentes, horários, preços, mentorias e projetos';
 
-  return `Você é ${attendant.name}, atendente virtual oficial via WhatsApp.
+  return `Você é ${attendant.name}, atendendo diretamente pelo WhatsApp da empresa.
 
-${styleDescription}
+DIRETRIZES DE COMUNICAÇÃO NO WHATSAPP (MUITO IMPORTANTE):
+1. **Converse como uma pessoa de verdade**: Seja natural, empático, acolhedor e próximo. NUNCA soe como um robô, atendente de telemarketing, chatbot engessado ou formulário de autoatendimento.
+2. **Responda exatamente ao que foi perguntado**: Se a pessoa perguntar "quem é você?", "quem fala?" ou disser "olá", apresente-se com carisma e simpatia de forma breve e acolhedora, convidando para o diálogo. NUNCA responda a uma saudação despejando listas inteiras de produtos, preços ou tópicos prontos.
+3. **Fluidez e concisão**: No WhatsApp as pessoas lêem no celular. Use mensagens ágeis, frases diretas e quebras de linha limpas.
+4. **Sem blocos gigantes**: Apresente uma informação relevante por vez e faça uma pergunta de volta para manter a conversa viva e personalizada.
+5. **Tom de voz**: ${styleDescription}
 
 CONTEXTO TEMPORAL:
 - Dia da semana: ${temporal.dayOfWeek}
-- Horário atual da mensagem: ${temporal.timeString}
-- Horário de atendimento da equipe humana: ${temporal.businessHoursText}
-${!temporal.isBusinessHours ? `*AVISO*: No momento a loja/empresa está FORA do expediente humano. Você pode tirar dúvidas básicas, mas informe com naturalidade que solicitações complexas serão atendidas pela equipe a partir das ${attendant.business_hours_start ?? 9}h.` : ''}
+- Horário atual: ${temporal.timeString}
+- Expediente de suporte humano: ${temporal.businessHoursText}
+${!temporal.isBusinessHours ? `*Atenção*: Estamos fora do expediente da equipe física. Você pode tirar dúvidas e bater papo normalmente com o cliente, apenas avisando com gentileza caso haja algo que exija retorno posterior da equipe.` : ''}
 
-ESCOPO E REGRAS DE CONDUTA OBRIGATÓRIAS (GUARDRAILS):
-1. Seu escopo de atendimento é estritamente: ${allowedTopics}.
-2. Se o cliente perguntar sobre conselhos médicos, diagnósticos, consultoria jurídica ou opiniões políticas, recuse gentilmente: "Desculpe, só posso ajudar com assuntos relacionados aos nossos serviços."
-3. NUNCA invente preços, promoções ou prazos que não constem na Base de Conhecimento ou nas Informações do Negócio.
-4. Responda em Português do Brasil com linguagem dinâmica para WhatsApp (mensagens compactas, negrito *assim*, quebras de linha limpas).
-5. Se não souber a informação com certeza absoluta, jamais alucine. Ofereça transferir para o atendimento humano.
+GUARDRAILS E LIMITES:
+- Seu escopo é: ${allowedTopics}.
+- Se o cliente perguntar sobre conselhos médicos, diagnósticos, consultoria jurídica ou posições políticas, decline cordialmente: "Desculpe, meu foco é te ajudar com os nossos serviços e soluções."
+- NUNCA invente preços ou promessas que não constem na sua base de informações.
+- Se não souber responder com certeza, seja transparente e ofereça verificar ou chamar alguém da equipe.
 
-INFORMAÇÕES DA EMPRESA:
-${attendant.business_info || 'Atendimento comercial via WhatsApp.'}
+INFORMAÇÕES SOBRE A EMPRESA E O ESPECIALISTA:
+${attendant.business_info || 'Atendimento via WhatsApp.'}
 
-INSTRUÇÕES EXTRAS DO GESTOR:
+INSTRUÇÕES DO GESTOR:
 ${attendant.custom_instructions || 'Seja prestativo, empático e resolutivo.'}
 
 ${knowledgeSection}`;
@@ -174,7 +175,7 @@ export function checkHandoverTriggers(
     return { trigger: true, reason: 'negative_sentiment' };
   }
 
-  // Gatilho 3: Falha repetida (ex: 2 últimas mensagens do cliente sem resolução)
+  // Gatilho 3: Falha repetida (3 mensagens seguidas com exatamente a mesma dúvida)
   const lastCustomerMessages = recentHistory
     .filter((m) => m.sender_type === 'customer')
     .slice(-3);
@@ -191,13 +192,20 @@ export function checkHandoverTriggers(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// REGRA 16: BUSCA RAG ISOLADA MULTI-TENANT
+// REGRA 16: BUSCA RAG CONTEXTUAL REFINADA (EVITAR FALSO POSITIVO EM SAUDAÇÕES)
 // ─────────────────────────────────────────────────────────────────────────────
 export function searchKnowledgeBase(
   userQuery: string,
   knowledgeItems: KnowledgeItem[]
 ): KnowledgeItem[] {
   const queryLower = userQuery.toLowerCase().trim();
+
+  // Se for apenas saudação ou apresentação básica, não puxar FAQs pesados
+  const casualIntents = ['oi', 'olá', 'ola', 'bom dia', 'boa tarde', 'boa noite', 'quem fala', 'quem fala?', 'quem é você', 'quem é vc', 'quem é vc?', 'quem e voce', 'quem e vc'];
+  if (casualIntents.includes(queryLower)) {
+    return [];
+  }
+
   const words = queryLower.split(/\s+/).filter((w) => w.length > 2);
 
   const scored = knowledgeItems.map((item) => {
@@ -205,11 +213,12 @@ export function searchKnowledgeBase(
     const qLower = item.question.toLowerCase();
     const aLower = item.answer.toLowerCase();
 
-    if (qLower.includes(queryLower)) score += 12;
-    if (aLower.includes(queryLower)) score += 6;
+    // Match forte na pergunta
+    if (qLower.includes(queryLower)) score += 20;
+    if (queryLower.length > 5 && qLower.startsWith(queryLower)) score += 10;
 
     words.forEach((word) => {
-      if (qLower.includes(word)) score += 3;
+      if (qLower.includes(word)) score += 4;
       if (aLower.includes(word)) score += 1;
     });
 
@@ -217,54 +226,78 @@ export function searchKnowledgeBase(
   });
 
   return scored
-    .filter((s) => s.score > 0)
+    .filter((s) => s.score >= 4)
     .sort((a, b) => b.score - a.score)
-    .slice(0, 4)
+    .slice(0, 3)
     .map((s) => s.item);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// REGRA 8: CHAMADA LLM COM TIMEOUT RÍGIDO (CLAUDE & GEMINI)
+// REGRA 8: CHAMADA LLM COM TIMEOUT RÍGIDO (CLAUDE & GEMINI COM MODELOS ATUAIS)
 // ─────────────────────────────────────────────────────────────────────────────
-const LLM_TIMEOUT_MS = 6000; // 6 segundos limite
+const LLM_TIMEOUT_MS = 9000; // 9 segundos para permitir respostas ricas e naturais
+
+// Lista de modelos Anthropic ordenados por preferência de qualidade conversacional
+const CLAUDE_MODELS = [
+  'claude-sonnet-4-6',
+  'claude-haiku-4-5-20251001',
+  'claude-sonnet-4-5-20250929',
+  'claude-3-5-sonnet-20241022',
+];
 
 export async function generateClaudeResponse(
   systemPrompt: string,
   userMessage: string,
   conversationHistory: Message[] = []
 ): Promise<string | null> {
-  const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+  const anthropicApiKey = process.env.ANTHROPIC_API_KEY?.trim();
   if (!anthropicApiKey) return null;
 
   try {
     const Anthropic = (await import('@anthropic-ai/sdk')).default;
     const anthropic = new Anthropic({ apiKey: anthropicApiKey });
 
-    // REGRA 11: Gestão de janela de contexto (últimas 6 mensagens)
-    const recentMessages = conversationHistory.slice(-6).map((m) => ({
+    // REGRA 11: Gestão de janela de contexto (últimas 8 mensagens formatadas)
+    const recentMessages = conversationHistory.slice(-8).map((m) => ({
       role: m.sender_type === 'customer' ? ('user' as const) : ('assistant' as const),
       content: m.content,
     }));
 
-    const responsePromise = anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
-      max_tokens: 450,
-      system: systemPrompt,
-      messages: [
-        ...recentMessages,
-        { role: 'user' as const, content: userMessage },
-      ],
-    });
+    // Tentar modelos suportados com fallback em cascata
+    for (const model of CLAUDE_MODELS) {
+      try {
+        const responsePromise = anthropic.messages.create({
+          model,
+          max_tokens: 450,
+          system: systemPrompt,
+          messages: [
+            ...recentMessages,
+            { role: 'user' as const, content: userMessage },
+          ],
+        });
 
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('LLM_TIMEOUT')), LLM_TIMEOUT_MS)
-    );
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('LLM_TIMEOUT')), LLM_TIMEOUT_MS)
+        );
 
-    const response = await Promise.race([responsePromise, timeoutPromise]);
-    const textBlock = response.content.find((c) => c.type === 'text');
-    return textBlock?.text || null;
+        const response = await Promise.race([responsePromise, timeoutPromise]);
+        const textBlock = response.content.find((c) => c.type === 'text');
+        if (textBlock?.text) {
+          return textBlock.text.trim();
+        }
+      } catch (err: any) {
+        if (err?.status === 404) {
+          // Modelo não disponível na conta, tenta o próximo
+          continue;
+        }
+        console.error(`Erro no modelo ${model}:`, err.message);
+        break;
+      }
+    }
+
+    return null;
   } catch (err: any) {
-    console.error('Erro na chamada Anthropic Claude:', err.message);
+    console.error('Erro geral Anthropic Claude:', err.message);
     return null;
   }
 }
@@ -273,7 +306,7 @@ export async function generateGeminiResponse(
   systemPrompt: string,
   userMessage: string
 ): Promise<string | null> {
-  const geminiApiKey = process.env.GEMINI_API_KEY;
+  const geminiApiKey = process.env.GEMINI_API_KEY?.trim();
   if (!geminiApiKey) return null;
 
   try {
@@ -299,7 +332,7 @@ export async function generateGeminiResponse(
 
     const res = await Promise.race([fetchPromise, timeoutPromise]);
     const data = await res.json();
-    return data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+    return data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || null;
   } catch (err: any) {
     console.error('Erro na chamada Gemini API:', err.message);
     return null;
@@ -307,7 +340,7 @@ export async function generateGeminiResponse(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// REGRA 12 & 24: MOTOR PRINCIPAL COM FILTRO DE CONFIANÇA E CATÁLOGO
+// REGRA 12 & 24: MOTOR PRINCIPAL COM FILTRO DE CONFIANÇA E PERSONALIZAÇÃO
 // ─────────────────────────────────────────────────────────────────────────────
 export interface BotResponseResult {
   content: string;
@@ -353,17 +386,17 @@ export async function generateBotResponse(
     };
   }
 
-  // 3. Consulta ao Catálogo / Base de Conhecimento RAG (Regra 16 e 24)
+  // 3. Consulta Inteligente ao Catálogo / Base de Conhecimento RAG (Regras 16 e 24)
   const relevantKnowledge = searchKnowledgeBase(userMessage, knowledgeItems);
   const systemPrompt = buildSystemPrompt(attendant, relevantKnowledge);
 
-  // 4. Chamada de IA com Timeout e Fallback (Regra 8)
+  // 4. Chamada de IA com Modelos Modernos (Claude Sonnet 4.6 / Haiku 4.5 / Gemini)
   let aiContent: string | null = null;
   let modelUsed = 'none';
 
   if (modelPreference === 'claude' || !process.env.GEMINI_API_KEY) {
     aiContent = await generateClaudeResponse(systemPrompt, userMessage, conversationHistory);
-    if (aiContent) modelUsed = 'claude-3-5-sonnet';
+    if (aiContent) modelUsed = 'claude-sonnet-4-6';
   }
 
   if (!aiContent && process.env.GEMINI_API_KEY) {
@@ -371,42 +404,41 @@ export async function generateBotResponse(
     if (aiContent) modelUsed = 'gemini-1.5-flash';
   }
 
-  // 5. Se o modelo respondeu com sucesso
+  // 5. Se o modelo LLM respondeu com sucesso
   if (aiContent) {
     return {
       content: aiContent,
       shouldHandover: false,
-      confidence: 0.95,
+      confidence: 0.98,
       modelUsed,
       ragItemsUsed: relevantKnowledge,
       promptSent: systemPrompt,
     };
   }
 
-  // 6. Fallback Resiliente (Regra 8 & 12)
+  // 6. Fallback Humanizado (Caso as APIs de IA estejam temporariamente instáveis)
   if (relevantKnowledge.length > 0) {
     const topItem = relevantKnowledge[0];
-    const greeting = attendant.personality === 'friendly' ? 'Olá! 😊 ' : 'Olá! ';
     return {
-      content: `${greeting}${topItem.answer}`,
+      content: `Oi! 😊 Sobre isso:\n\n${topItem.answer}\n\nFicou claro ou posso te explicar mais algum detalhe?`,
       shouldHandover: false,
       confidence: 0.85,
-      modelUsed: 'rag_deterministic_fallback',
+      modelUsed: 'rag_humanized_fallback',
       ragItemsUsed: [topItem],
       promptSent: systemPrompt,
       isFallback: true,
     };
   }
 
-  const defaultGreeting = attendant.personality === 'friendly'
-    ? `Olá! Obrigado por entrar em contato com a ${attendant.name || 'nossa equipe'}. Como posso te ajudar hoje?`
-    : `Olá! Como posso ajudar você hoje?`;
+  const attendantGreetingName = attendant.name && !attendant.name.toLowerCase().includes('virtual')
+    ? attendant.name
+    : 'equipe';
 
   return {
-    content: defaultGreeting,
+    content: `Olá! Tudo bem? 😊 Aqui é do atendimento da ${attendantGreetingName}.\n\nComo posso te ajudar hoje?`,
     shouldHandover: false,
-    confidence: 0.70,
-    modelUsed: 'system_default_fallback',
+    confidence: 0.75,
+    modelUsed: 'system_humanized_fallback',
     ragItemsUsed: [],
     promptSent: systemPrompt,
     isFallback: true,
