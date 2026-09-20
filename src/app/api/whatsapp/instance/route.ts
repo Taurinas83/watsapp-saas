@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const EVOLUTION_URL = process.env.EVOLUTION_API_URL || 'http://167.71.23.116:8080';
-const EVOLUTION_KEY = process.env.EVOLUTION_API_KEY || 'minha_chave_saas_2026';
+const rawUrl = process.env.EVOLUTION_API_URL || 'https://evolution-api-production-5589.up.railway.app';
+const EVOLUTION_URL = rawUrl.trim().replace(/\/+$/, '');
+const rawKey = process.env.EVOLUTION_API_KEY || 'e5039cbd79c8df9f44f542e9bf4b21bc3ae9a1f191647979f80697888a5a2360';
+const EVOLUTION_KEY = rawKey.trim();
 
 // Timeout for all Evolution API requests (the server is slow)
 const API_TIMEOUT = 60000; // 60 seconds

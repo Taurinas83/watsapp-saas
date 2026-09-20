@@ -37,7 +37,31 @@ export interface Attendant {
   custom_instructions: string;
   whatsapp_status: WhatsAppStatus;
   whatsapp_phone?: string;
+  business_hours_start?: number;
+  business_hours_end?: number;
+  copilot_mode?: boolean;
+  allowed_topics?: string[];
   updated_at?: string;
+}
+
+export interface AIAuditLog {
+  id: string;
+  organization_id: string;
+  conversation_id?: string;
+  customer_phone: string;
+  whatsapp_message_id?: string;
+  user_input: string;
+  sanitized_input: string;
+  prompt_sent?: string;
+  rag_items_used?: any[];
+  ai_response?: string;
+  confidence?: number;
+  model_used?: string;
+  latency_ms?: number;
+  handover_triggered?: boolean;
+  handover_reason?: string;
+  action_taken?: string;
+  created_at: string;
 }
 
 export interface KnowledgeItem {

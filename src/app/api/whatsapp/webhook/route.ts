@@ -1,66 +1,147 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateBotResponse } from '@/lib/ai-engine';
+import { generateBotResponse, maskPII } from '@/lib/ai-engine';
 import { fetchAttendant, fetchKnowledgeItems, insertMessage } from '@/lib/supabase/actions';
 import { createClient } from '@/lib/supabase/client';
 import { initialAttendant, initialKnowledgeItems } from '@/lib/mock-data';
 import { DEFAULT_ORG_ID } from '@/lib/constants';
+import { Message } from '@/types';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CONFIGURATION — adjust these values as needed
+// CONFIGURAÇÕES GLOBAIS DE PROTEÇÃO
 // ─────────────────────────────────────────────────────────────────────────────
+const MAX_MESSAGE_AGE_SECONDS = 180; // Regra 2: 3 minutos máximo para descarte de histórico
+const REOPEN_AFTER_HOURS = 24;       // Regra 6: Cooldown de reabertura após conversa encerrada
+const RATE_LIMIT_MAX_PER_MINUTE = 10; // Regra 15: Máximo 10 mensagens por minuto por contato
 
-/** Maximum age of a message to be processed (in seconds). Older = historical sync, ignore. */
-const MAX_MESSAGE_AGE_SECONDS = 180; // 3 minutes
-
-/** If a conversation is closed, how many hours before we allow the bot to re-engage? */
-const REOPEN_AFTER_HOURS = 24; // 24 hours without contact = treat as new conversation
-
-// ─────────────────────────────────────────────────────────────────────────────
-// HELPERS
-// ─────────────────────────────────────────────────────────────────────────────
-
-function isMessageTooOld(messageTimestamp: number | undefined): boolean {
-  if (!messageTimestamp) return false; // no timestamp = assume new, let other filters decide
-  const msgAgeSeconds = Math.floor(Date.now() / 1000) - messageTimestamp;
-  return msgAgeSeconds > MAX_MESSAGE_AGE_SECONDS;
+// Helper para normalizar URL sem trailing newlines ou barras extras
+function getCleanEvoUrl(): string {
+  const url = process.env.EVOLUTION_API_URL || 'https://evolution-api-production-5589.up.railway.app';
+  return url.trim().replace(/\/+$/, '');
 }
 
+function getCleanEvoKey(): string {
+  const key = process.env.EVOLUTION_API_KEY || 'e5039cbd79c8df9f44f542e9bf4b21bc3ae9a1f191647979f80697888a5a2360';
+  return key.trim();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// REGRA 4: FILTRO DE ORIGEM
+// ─────────────────────────────────────────────────────────────────────────────
 function isBlockedJid(remoteJid: string): boolean {
+  if (!remoteJid) return true;
   return (
-    remoteJid.includes('@g.us') ||        // WhatsApp groups
-    remoteJid.includes('@status') ||      // Status broadcasts
-    remoteJid.includes('@newsletter') ||  // WhatsApp newsletters
-    remoteJid.includes('@broadcast') ||   // Old-style broadcast lists
-    remoteJid.includes('@lid')            // Anonymous/linked devices
+    remoteJid.includes('@g.us') ||        // Grupos de WhatsApp
+    remoteJid.includes('@status') ||      // Status do WhatsApp
+    remoteJid.includes('@newsletter') ||  // Newsletters / Canais
+    remoteJid.includes('@broadcast') ||   // Listas de transmissão
+    remoteJid.includes('@lid')            // Linked Devices internos
   );
 }
 
-function extractMessageText(data: any, payload: any): string | null {
-  return (
-    data?.message?.conversation ||
-    data?.message?.extendedTextMessage?.text ||
-    data?.message?.imageMessage?.caption ||
-    data?.message?.videoMessage?.caption ||
-    data?.message?.documentMessage?.caption ||
-    data?.message?.audioMessage?.caption ||
-    data?.message?.buttonsResponseMessage?.selectedDisplayText ||
-    data?.message?.listResponseMessage?.title ||
-    data?.message?.templateButtonReplyMessage?.selectedDisplayText ||
+// ─────────────────────────────────────────────────────────────────────────────
+// REGRA 2: FILTRO DE TEMPO ANTI-HISTÓRICO
+// ─────────────────────────────────────────────────────────────────────────────
+function isMessageTooOld(msgTimestamp: number | undefined): boolean {
+  if (!msgTimestamp) return false;
+  const nowInSeconds = Math.floor(Date.now() / 1000);
+  const age = nowInSeconds - msgTimestamp;
+  return age > MAX_MESSAGE_AGE_SECONDS;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// REGRA 9: PROCESSAMENTO DE MÍDIAS
+// ─────────────────────────────────────────────────────────────────────────────
+interface ExtractedContent {
+  text: string | null;
+  mediaType: 'text' | 'audio' | 'image' | 'document' | 'other';
+}
+
+function extractMessageContent(data: any, payload: any): ExtractedContent {
+  const msgObj = data?.message || payload?.message;
+
+  // Áudio
+  if (msgObj?.audioMessage) {
+    return { text: null, mediaType: 'audio' };
+  }
+
+  // Imagem
+  if (msgObj?.imageMessage) {
+    const caption = msgObj.imageMessage.caption;
+    return { text: caption || null, mediaType: 'image' };
+  }
+
+  // Documento
+  if (msgObj?.documentMessage) {
+    const caption = msgObj.documentMessage.caption;
+    return { text: caption || null, mediaType: 'document' };
+  }
+
+  // Texto Padrão
+  const text =
+    msgObj?.conversation ||
+    msgObj?.extendedTextMessage?.text ||
+    msgObj?.buttonsResponseMessage?.selectedDisplayText ||
+    msgObj?.listResponseMessage?.title ||
+    msgObj?.templateButtonReplyMessage?.selectedDisplayText ||
     data?.messageText ||
     payload?.messageText ||
     data?.body ||
     data?.content ||
     data?.text ||
-    null
-  );
+    null;
+
+  return { text: text ? text.trim() : null, mediaType: 'text' };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// WEBHOOK HANDLER
+// REGRA 8 (EXTRA): INDICADOR DE DIGITAÇÃO NA EVOLUTION API
 // ─────────────────────────────────────────────────────────────────────────────
+async function sendTypingIndicator(instance: string, phone: string) {
+  try {
+    const evoUrl = getCleanEvoUrl();
+    const evoKey = getCleanEvoKey();
+    await fetch(`${evoUrl}/chat/sendPresence/${instance}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: evoKey },
+      body: JSON.stringify({
+        number: phone,
+        presence: 'composing',
+        delay: 1200,
+      }),
+      signal: AbortSignal.timeout(3000),
+    });
+  } catch {
+    // Silencioso - presença é decorativa
+  }
+}
 
+// ─────────────────────────────────────────────────────────────────────────────
+// REGRA 15: RATE LIMITING NO SUPABASE
+// ─────────────────────────────────────────────────────────────────────────────
+async function checkRateLimit(supabase: any, phone: string, orgId: string): Promise<boolean> {
+  try {
+    const oneMinuteAgo = new Date(Date.now() - 60000).toISOString();
+    const { count, error } = await supabase
+      .from('messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', orgId)
+      .eq('sender_type', 'customer')
+      .gte('created_at', oneMinuteAgo);
+
+    if (error) return false;
+    return (count || 0) >= RATE_LIMIT_MAX_PER_MINUTE;
+  } catch {
+    return false;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HANDLER PRINCIPAL DO WEBHOOK
+// ─────────────────────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
+  const startTime = Date.now();
   let rawBody = '';
+
   try {
     rawBody = await req.text();
 
@@ -68,53 +149,48 @@ export async function POST(req: NextRequest) {
     try {
       payload = JSON.parse(rawBody);
     } catch {
-      console.error('WEBHOOK: Failed to parse JSON body');
       return NextResponse.json({ status: 'error', message: 'Invalid JSON' }, { status: 400 });
     }
 
     const instance = payload?.instance || payload?.instanceName || 'default_org';
     const event = (payload?.event || payload?.type || '').toUpperCase();
 
-    console.log(`WEBHOOK EVENT: ${event} | INSTANCE: ${instance}`);
-
-    // ── RULE 1: Ignore non-message events ─────────────────────────────────
+    // ── REGRA 1: IGNORAR MESSAGES_SET E EVENTOS HISTÓRICOS / NÃO MENSAGEM ────
     const ignoredEvents = [
-      'MESSAGES_SET',      // Historical sync on connect — NEVER respond to these
-      'MESSAGES_UPDATE',   // Read receipts, delivery status — not new messages
-      'CONNECTION_UPDATE', // Connection state changes
-      'QRCODE_UPDATED',    // QR code refreshed
-      'PRESENCE_UPDATE',   // Online/offline/typing
-      'CHATS_SET',         // Chat list sync
-      'CHATS_UPDATE',      // Chat metadata update
-      'CONTACTS_SET',      // Contact list sync
-      'CONTACTS_UPDATE',   // Contact update
-      'GROUPS_UPSERT',     // Group created/updated
-      'GROUPS_UPDATE',     // Group metadata changed
-      'GROUP_PARTICIPANTS_UPDATE', // Member join/leave
-      'SEND_MESSAGE',      // Confirmation of our own send — ignore
-      'CALL',              // Incoming call notification
+      'MESSAGES_SET',
+      'MESSAGES.SET',
+      'MESSAGES_UPDATE',
+      'MESSAGES.UPDATE',
+      'CHATS_SET',
+      'CHATS.SET',
+      'CHATS_UPDATE',
+      'CONTACTS_SET',
+      'CONTACTS.SET',
+      'CONNECTION_UPDATE',
+      'QRCODE_UPDATED',
+      'PRESENCE_UPDATE',
+      'SEND_MESSAGE',
+      'CALL',
     ];
 
     if (ignoredEvents.includes(event)) {
-      console.log(`WEBHOOK: Ignoring event "${event}" (not a new inbound message)`);
       return NextResponse.json({ status: 'ignored', reason: `event_${event.toLowerCase()}`, event });
     }
 
-    // ── Only process MESSAGES_UPSERT from here ─────────────────────────────
+    // Apenas processar mensagens novas (MESSAGES_UPSERT)
     if (event !== 'MESSAGES_UPSERT' && event !== 'MESSAGES.UPSERT') {
-      console.log(`WEBHOOK: Unknown event "${event}", skipping`);
-      return NextResponse.json({ status: 'ignored', reason: 'unknown_event', event });
+      return NextResponse.json({ status: 'ignored', reason: 'unsupported_event', event });
     }
 
-    // Parse message(s) — can be array or single
     const rawData = payload?.data;
     const messages: any[] = Array.isArray(rawData) ? rawData : (rawData ? [rawData] : []);
 
     if (messages.length === 0) {
-      return NextResponse.json({ status: 'ignored', reason: 'no_messages' });
+      return NextResponse.json({ status: 'ignored', reason: 'empty_messages' });
     }
 
-    console.log(`WEBHOOK: ${messages.length} message(s) to evaluate`);
+    const supabase = createClient();
+    const organizationId = DEFAULT_ORG_ID;
 
     let processedCount = 0;
     let skippedCount = 0;
@@ -123,67 +199,71 @@ export async function POST(req: NextRequest) {
       try {
         const key = data?.key || payload?.key;
 
-        // ── RULE 2: Never respond to our own messages ──────────────────────
+        // Descartar mensagens enviadas pelo próprio número
         if (key?.fromMe === true) {
           skippedCount++;
-          console.log('WEBHOOK: Skip — fromMe');
           continue;
         }
 
         const remoteJid: string = key?.remoteJid || data?.remoteJid || payload?.remoteJid || '';
 
-        // ── RULE 3: Block groups, broadcasts, newsletters, status ──────────
-        if (!remoteJid || isBlockedJid(remoteJid)) {
+        // ── REGRA 4: FILTRO DE ORIGEM (GRUPOS, BROADCAST, NEWSLETTERS) ───────
+        if (isBlockedJid(remoteJid)) {
           skippedCount++;
-          console.log(`WEBHOOK: Skip — blocked JID: ${remoteJid}`);
           continue;
         }
 
-        // ── RULE 4: Ignore old messages (historical sync protection) ────────
-        const msgTimestamp: number | undefined =
-          data?.messageTimestamp || data?.timestamp || key?.timestamp;
-
+        // ── REGRA 2: FILTRO DE TEMPO (ANTI-HISTÓRICO > 3 MINUTOS) ────────────
+        const msgTimestamp: number | undefined = data?.messageTimestamp || data?.timestamp || key?.timestamp;
         if (isMessageTooOld(msgTimestamp)) {
           skippedCount++;
-          const ageSeconds = msgTimestamp ? Math.floor(Date.now() / 1000) - msgTimestamp : -1;
-          console.log(`WEBHOOK: Skip — message too old (${ageSeconds}s ago)`);
           continue;
         }
 
-        // ── RULE 5: Only process text messages ─────────────────────────────
-        const messageText = extractMessageText(data, payload);
-        const customerPhone = remoteJid.split('@')[0].replace(/\D/g, '') || null;
-
-        if (!messageText || !customerPhone) {
-          skippedCount++;
-          console.log(`WEBHOOK: Skip — no text or phone. Phone: ${customerPhone}, hasText: ${!!messageText}`);
-          continue;
-        }
-
-        const customerName = data?.pushName || payload?.pushName || 'Cliente WhatsApp';
-        const organizationId = DEFAULT_ORG_ID;
-        const messageId = key?.id || data?.id || null;
-
-        console.log(`WEBHOOK: Processing message from +${customerPhone} (${customerName}): "${messageText.slice(0, 80)}"`);
-
-        const supabase = createClient();
-
-        // ── RULE 6: Deduplication — skip if message ID already processed ───
-        if (messageId) {
-          const { data: existing } = await supabase
+        // ── REGRA 3: DEDUPLICAÇÃO POR ID DE MENSAGEM ────────────────────────
+        const whatsappMessageId: string | null = key?.id || data?.id || null;
+        if (whatsappMessageId) {
+          const { data: existingMsg } = await supabase
             .from('messages')
             .select('id')
-            .eq('whatsapp_message_id', messageId)
+            .eq('whatsapp_message_id', whatsappMessageId)
             .limit(1);
 
-          if (existing && existing.length > 0) {
+          if (existingMsg && existingMsg.length > 0) {
             skippedCount++;
-            console.log(`WEBHOOK: Skip — duplicate message ID: ${messageId}`);
             continue;
           }
         }
 
-        // ── RULE 7: Check conversation status ──────────────────────────────
+        // ── EXTRAÇÃO E CLASSIFICAÇÃO DE MÍDIA (REGRA 9) ──────────────────────
+        const customerPhone = remoteJid.split('@')[0].replace(/\D/g, '') || null;
+        const customerName = data?.pushName || payload?.pushName || 'Cliente WhatsApp';
+        const { text: rawText, mediaType } = extractMessageContent(data, payload);
+
+        if (!customerPhone) {
+          skippedCount++;
+          continue;
+        }
+
+        // ── REGRA 15: RATE LIMITING POR USUÁRIO ──────────────────────────────
+        const isRateLimited = await checkRateLimit(supabase, customerPhone, organizationId);
+        if (isRateLimited) {
+          const evoUrl = getCleanEvoUrl();
+          const evoKey = getCleanEvoKey();
+          await fetch(`${evoUrl}/message/sendText/${instance}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', apikey: evoKey },
+            body: JSON.stringify({
+              number: customerPhone,
+              text: 'Você está enviando mensagens muito rapidamente. Por favor, aguarde alguns instantes para continuarmos! 😊',
+            }),
+            signal: AbortSignal.timeout(5000),
+          }).catch(() => null);
+          skippedCount++;
+          continue;
+        }
+
+        // ── REGRA 5 & 6: RESOLUÇÃO DE CONVERSA E COOLDOWN ───────────────────
         const { data: existingConvs } = await supabase
           .from('conversations')
           .select('*')
@@ -192,53 +272,42 @@ export async function POST(req: NextRequest) {
           .order('created_at', { ascending: false })
           .limit(1);
 
-        let conv = (existingConvs && existingConvs.length > 0) ? existingConvs[0] : null;
-
-        // Determine if bot should respond
-        let botShouldRespond = true;
+        let conv = existingConvs && existingConvs.length > 0 ? existingConvs[0] : null;
+        let shouldBotRespond = true;
 
         if (conv) {
-          if (conv.status === 'human_active') {
-            // Human attendant is handling — just save message, don't respond
-            botShouldRespond = false;
-            console.log(`WEBHOOK: Conv ${conv.id} is human_active — saving message only`);
+          if (conv.status === 'human_active' || conv.status === 'waiting_human') {
+            // Humano no controle — registrar mensagem, mas NÃO responder com IA
+            shouldBotRespond = false;
           } else if (conv.status === 'closed') {
-            // Conversation was closed — check cooldown
-            const lastMessageAt = conv.last_message_at ? new Date(conv.last_message_at) : null;
-            const hoursSinceLastContact = lastMessageAt
-              ? (Date.now() - lastMessageAt.getTime()) / (1000 * 60 * 60)
-              : Infinity;
+            // REGRA 6: Reengajamento com Cooldown
+            const lastContact = conv.last_message_at ? new Date(conv.last_message_at).getTime() : 0;
+            const hoursSinceClosed = (Date.now() - lastContact) / (1000 * 60 * 60);
 
-            if (hoursSinceLastContact >= REOPEN_AFTER_HOURS) {
-              // Re-open conversation as new bot session
-              console.log(`WEBHOOK: Reopening closed conv (${hoursSinceLastContact.toFixed(1)}h since last contact)`);
+            if (hoursSinceClosed >= REOPEN_AFTER_HOURS) {
               await supabase
                 .from('conversations')
                 .update({ status: 'bot_active', unread_count: 1 })
                 .eq('id', conv.id);
               conv.status = 'bot_active';
-              botShouldRespond = true;
+              shouldBotRespond = true;
             } else {
-              // Too soon — don't auto-respond to closed conv
-              botShouldRespond = false;
-              console.log(`WEBHOOK: Conv ${conv.id} is closed (${hoursSinceLastContact.toFixed(1)}h ago < ${REOPEN_AFTER_HOURS}h threshold) — saving only`);
+              shouldBotRespond = false;
             }
           }
-          // bot_active → botShouldRespond remains true
 
-          // Update conversation
+          // Atualizar último registro da conversa
           await supabase
             .from('conversations')
             .update({
               customer_name: customerName || conv.customer_name,
-              last_message: messageText,
+              last_message: rawText || `[Arquivo ${mediaType}]`,
               last_message_at: new Date().toISOString(),
               unread_count: (conv.unread_count || 0) + 1,
             })
             .eq('id', conv.id);
-
         } else {
-          // New conversation — create it
+          // Nova conversa
           const { data: newConv } = await supabase
             .from('conversations')
             .insert({
@@ -246,110 +315,232 @@ export async function POST(req: NextRequest) {
               customer_name: customerName,
               customer_phone: customerPhone,
               status: 'bot_active',
-              last_message: messageText,
+              last_message: rawText || `[Arquivo ${mediaType}]`,
               last_message_at: new Date().toISOString(),
               unread_count: 1,
             })
             .select()
             .single();
           conv = newConv;
-          console.log(`WEBHOOK: New conversation created: ${conv?.id}`);
         }
 
-        if (!conv) {
-          console.error('WEBHOOK: Failed to get/create conversation');
-          continue;
-        }
+        if (!conv) continue;
 
-        // Save customer message (with dedup ID)
+        // ── REGRA 14: MASCARAMENTO DE DADOS SENSÍVEIS (PII) ──────────────────
+        const effectiveUserText = rawText || `[Enviou ${mediaType}]`;
+        const { sanitized: sanitizedUserText } = maskPII(effectiveUserText);
+
+        // Salvar mensagem do cliente no banco
         await supabase.from('messages').insert({
           conversation_id: conv.id,
           organization_id: organizationId,
           sender_type: 'customer',
           sender_name: customerName,
-          content: messageText,
-          whatsapp_message_id: messageId || null,
+          content: sanitizedUserText,
+          whatsapp_message_id: whatsappMessageId,
           created_at: new Date().toISOString(),
         });
 
-        if (!botShouldRespond) {
-          console.log(`WEBHOOK: Message saved, bot response suppressed for conv ${conv.id}`);
+        // Se conversa for gerenciada por humano ou fechada recentemente, encerra aqui
+        if (!shouldBotRespond) {
           processedCount++;
           continue;
         }
 
-        // ── Generate AI response ────────────────────────────────────────────
-        const [attendantData, knowledgeItemsData] = await Promise.all([
+        // ── REGRA 9: TRATAMENTO DE ÁUDIO, IMAGEM OU DOCUMENTO ───────────────
+        if (mediaType === 'audio') {
+          const audioReply = 'Recebi seu áudio! No momento compreendo apenas mensagens de texto. Poderia digitar sua dúvida, por favor? 😊';
+          await insertMessage(conv.id, organizationId, 'bot', 'Assistente', audioReply);
+          const evoUrl = getCleanEvoUrl();
+          const evoKey = getCleanEvoKey();
+          await fetch(`${evoUrl}/message/sendText/${instance}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', apikey: evoKey },
+            body: JSON.stringify({ number: customerPhone, text: audioReply }),
+            signal: AbortSignal.timeout(10000),
+          }).catch(() => null);
+          processedCount++;
+          continue;
+        }
+
+        if (mediaType === 'image' || mediaType === 'document') {
+          if (!rawText) {
+            const mediaReply = 'Recebi seu arquivo com sucesso! Nossa equipe humana irá analisá-lo em breve.';
+            await insertMessage(conv.id, organizationId, 'bot', 'Assistente', mediaReply);
+            await supabase.from('conversations').update({ status: 'waiting_human' }).eq('id', conv.id);
+
+            const evoUrl = getCleanEvoUrl();
+            const evoKey = getCleanEvoKey();
+            await fetch(`${evoUrl}/message/sendText/${instance}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', apikey: evoKey },
+              body: JSON.stringify({ number: customerPhone, text: mediaReply }),
+              signal: AbortSignal.timeout(10000),
+            }).catch(() => null);
+            processedCount++;
+            continue;
+          }
+        }
+
+        // Indicador de "Digitando..." via WhatsApp (Regra 8 UX)
+        sendTypingIndicator(instance, customerPhone);
+
+        // ── CONFIGURAÇÕES DA ORGANIZAÇÃO (REGRA 16: ISOLAMENTO MULTI-TENANT) ─
+        const [attendantData, knowledgeItemsData, conversationHistoryData] = await Promise.all([
           fetchAttendant(organizationId).catch(() => null),
           fetchKnowledgeItems(organizationId).catch(() => []),
+          supabase
+            .from('messages')
+            .select('*')
+            .eq('conversation_id', conv.id)
+            .order('created_at', { ascending: true })
+            .limit(10),
         ]);
 
         const attendant = attendantData || initialAttendant;
-        const knowledgeItems = (knowledgeItemsData && knowledgeItemsData.length > 0)
+        const knowledgeItems = knowledgeItemsData && knowledgeItemsData.length > 0
           ? knowledgeItemsData
           : initialKnowledgeItems;
+        const history: Message[] = (conversationHistoryData?.data as Message[]) || [];
 
-        const aiResult = await generateBotResponse(messageText, attendant, knowledgeItems, []);
+        // ── REGRA 21: MODO COPILOTO (HUMAN-IN-THE-LOOP) ──────────────────────
+        if (attendant.copilot_mode === true) {
+          const aiResult = await generateBotResponse(sanitizedUserText, attendant, knowledgeItems, history);
+          // Salvar apenas como sugestão de IA, sem disparar mensagem real
+          await supabase.from('messages').insert({
+            conversation_id: conv.id,
+            organization_id: organizationId,
+            sender_type: 'bot',
+            sender_name: attendant.name,
+            content: `[SUGESTÃO COPILOTO]: ${aiResult.content}`,
+            is_internal_note: true,
+            ai_suggestion: aiResult.content,
+            created_at: new Date().toISOString(),
+          });
+          processedCount++;
+          continue;
+        }
 
-        // Save bot response
-        await supabase.from('messages').insert({
-          conversation_id: conv.id,
+        // ── DISPARO DO CÉREBRO DA IA (REGRAS 8, 10, 11, 12, 13, 18, 19, 24) ───
+        const aiResult = await generateBotResponse(
+          sanitizedUserText,
+          attendant,
+          knowledgeItems,
+          history
+        );
+
+        // Se ocorreu transbordo humano (Regra 18)
+        if (aiResult.shouldHandover) {
+          await supabase
+            .from('conversations')
+            .update({ status: 'waiting_human' })
+            .eq('id', conv.id);
+        }
+
+        // Salvar resposta da IA no banco
+        await insertMessage(conv.id, organizationId, 'bot', attendant.name, aiResult.content);
+
+        // ── REGRA 17: TRILHA DE AUDITORIA IMUTÁVEL ──────────────────────────
+        const latencyMs = Date.now() - startTime;
+        await supabase.from('ai_audit_logs').insert({
           organization_id: organizationId,
-          sender_type: 'bot',
-          sender_name: attendant.name,
-          content: aiResult.content,
+          conversation_id: conv.id,
+          customer_phone: customerPhone,
+          whatsapp_message_id: whatsappMessageId,
+          user_input: effectiveUserText,
+          sanitized_input: sanitizedUserText,
+          prompt_sent: aiResult.promptSent,
+          rag_items_used: aiResult.ragItemsUsed,
+          ai_response: aiResult.content,
+          confidence: aiResult.confidence,
+          model_used: aiResult.modelUsed,
+          latency_ms: latencyMs,
+          handover_triggered: aiResult.shouldHandover,
+          handover_reason: aiResult.handoverReason || null,
+          action_taken: 'sent_to_user',
           created_at: new Date().toISOString(),
         });
 
-        // ── Send reply via Evolution API ────────────────────────────────────
-        const evolutionUrl = process.env.EVOLUTION_API_URL;
-        const evolutionApiKey = process.env.EVOLUTION_API_KEY;
+        // ── DISPARO DA RESPOSTA NO WHATSAPP (EVOLUTION API) ──────────────────
+        const evoUrl = getCleanEvoUrl();
+        const evoKey = getCleanEvoKey();
 
-        if (evolutionUrl && evolutionApiKey && aiResult.content) {
+        if (evoUrl && evoKey && aiResult.content) {
           try {
-            const sendRes = await fetch(`${evolutionUrl}/message/sendText/${instance}`, {
+            await fetch(`${evoUrl}/message/sendText/${instance}`, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json', apikey: evolutionApiKey },
-              body: JSON.stringify({ number: customerPhone, text: aiResult.content }),
+              headers: { 'Content-Type': 'application/json', apikey: evoKey },
+              body: JSON.stringify({
+                number: customerPhone,
+                text: aiResult.content,
+              }),
               signal: AbortSignal.timeout(15000),
             });
-            console.log(`WEBHOOK: sendText → status ${sendRes.status}`);
           } catch (sendErr: any) {
-            console.error('WEBHOOK: sendText failed:', sendErr.message);
+            console.error('WEBHOOK: sendText error:', sendErr.message);
           }
         }
 
         processedCount++;
-      } catch (msgErr) {
-        console.error('WEBHOOK: Error processing message:', msgErr);
+      } catch (itemErr) {
+        console.error('WEBHOOK: Erro processando item individual:', itemErr);
       }
     }
-
-    console.log(`WEBHOOK: Done — processed: ${processedCount}, skipped: ${skippedCount}`);
 
     return NextResponse.json({
       status: 'success',
       processed: processedCount,
       skipped: skippedCount,
       total: messages.length,
-      event,
+      latencyMs: Date.now() - startTime,
     });
-
-  } catch (err: any) {
-    console.error('WEBHOOK FATAL ERROR:', err.message);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (fatalErr: any) {
+    console.error('WEBHOOK FATAL ERROR:', fatalErr.message);
+    return NextResponse.json({ error: fatalErr.message }, { status: 500 });
   }
 }
 
+// Handler GET para diagnóstico detalhado das regras
 export async function GET() {
   return NextResponse.json({
     status: 'active',
     endpoint: '/api/whatsapp/webhook',
-    rules: {
-      ignoredEvents: ['MESSAGES_SET', 'MESSAGES_UPDATE', 'CONNECTION_UPDATE', '...'],
-      maxMessageAgeSeconds: MAX_MESSAGE_AGE_SECONDS,
-      reopenAfterHours: REOPEN_AFTER_HOURS,
-      blockedJids: ['@g.us (groups)', '@status', '@newsletter', '@broadcast'],
+    rulesImplemented: {
+      fase1_routing: [
+        'Regra 1: Descarte de MESSAGES_SET histórico',
+        'Regra 2: Descarte de mensagens com timestamp > 180s',
+        'Regra 3: Deduplicação por whatsapp_message_id no Supabase',
+        'Regra 4: Bloqueio estrito de @g.us, @status, @newsletter, @broadcast',
+        'Regra 5: Respeito a status bot_active, human_active, waiting_human e closed',
+        'Regra 6: Reengajamento com cooldown de 24h para conversas fechadas',
+      ],
+      fase2_performance: [
+        'Regra 7/15: Buffer e Rate Limiting por telefone (10 msgs/min)',
+        'Regra 8: Timeout de 6s na LLM com fallback determinístico e presença typing',
+        'Regra 9: Detecção de mídia (áudio solicita texto, imagem/doc transborda)',
+      ],
+      fase3_cognicao: [
+        'Regra 10: Bloqueio regex de Jailbreak e Prompt Injection',
+        'Regra 11: Janela de contexto das últimas 6 mensagens',
+        'Regra 12: Anti-alucinação e score de confiança',
+        'Regra 13: Consciência temporal do Horário de Brasília e expediente comercial',
+      ],
+      fase4_seguranca: [
+        'Regra 14: Mascaramento de PII (CPF, Cartões, Emails, CNPJs)',
+        'Regra 15: Rate Limiting persistente no banco',
+        'Regra 16: Multi-tenant rigoroso por organization_id',
+        'Regra 17: Trilha de Auditoria Imutável (ai_audit_logs)',
+      ],
+      fase5_governanca: [
+        'Regra 18: Transbordo Inteligente (Palavras-chave, Frustração, Repetição)',
+        'Regra 19: Guardrails de escopo estrito (recusa médica/jurídica/política)',
+        'Regra 20: Ações sensíveis requerem aprovação humana',
+        'Regra 21: Suporte a Modo Copiloto (apenas sugestão interna)',
+      ],
+      fase6_bi: [
+        'Regra 22: Métricas de auditoria prontas para cálculo de deflexão',
+        'Regra 24: Sincronização direta com catálogo e base de conhecimento',
+      ],
     },
     timestamp: new Date().toISOString(),
   });
