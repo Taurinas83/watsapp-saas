@@ -112,7 +112,7 @@ export function WhatsAppSimulatorModal({ onClose }: WhatsAppSimulatorModalProps)
     {
       id: 'msg-1',
       sender: 'bot',
-      text: 'Olá! Sou a Sofia, secretária virtual da Zapella. Como posso te ajudar hoje? 😊',
+      text: 'Olá! Sou a Zapella, sua secretária virtual. Como posso te ajudar hoje? 😊',
       time: 'Agora'
     }
   ]);
@@ -177,7 +177,7 @@ export function WhatsAppSimulatorModal({ onClose }: WhatsAppSimulatorModalProps)
       {
         id: `reset-${Date.now()}`,
         sender: 'bot',
-        text: 'Olá! Sou a Sofia, secretária virtual da Zapella. Como posso te ajudar hoje? 😊',
+        text: 'Olá! Sou a Zapella, sua secretária virtual. Como posso te ajudar hoje? 😊',
         time: 'Agora'
       }
     ]);
@@ -196,7 +196,7 @@ export function WhatsAppSimulatorModal({ onClose }: WhatsAppSimulatorModalProps)
             <div className="relative w-10 h-10 rounded-full overflow-hidden bg-white/20 flex items-center justify-center shrink-0 border border-white/30">
               <Image
                 src="/zapella-icon.png"
-                alt="Sofia Zapella"
+                alt="Zapella"
                 width={40}
                 height={40}
                 className="w-full h-full object-cover"
@@ -205,7 +205,7 @@ export function WhatsAppSimulatorModal({ onClose }: WhatsAppSimulatorModalProps)
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <p className="font-bold text-sm leading-tight">Sofia • Zapella IA</p>
+                <p className="font-bold text-sm leading-tight">Zapella • Secretária IA</p>
                 <span className="text-[9px] bg-[#25D366]/30 text-emerald-200 px-1.5 py-0.2 rounded font-semibold uppercase tracking-wider">
                   Bot
                 </span>

@@ -113,7 +113,7 @@ export default function AttendantConfigPage() {
                   type="text"
                   value={attendant.name}
                   onChange={(e) => setAttendant({ ...attendant, name: e.target.value })}
-                  placeholder="Ex: Sofia, Lucas, Assistente Virtual"
+                  placeholder="Ex: Zapella, Lucas, Assistente Virtual"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#00E676] font-medium"
                 />
                 <p className="text-[11px] text-slate-400 mt-1">Este é o nome com o qual a IA se apresentará para os clientes.</p>

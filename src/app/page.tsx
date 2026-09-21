@@ -386,7 +386,7 @@ export default function LandingPage() {
                   <div className="flex items-center justify-between border-b border-slate-200 pb-4">
                     <div>
                       <h4 className="text-sm font-bold text-[#111B21]">Identidade do Atendente Virtual</h4>
-                      <p className="text-xs text-[#667781]">Configure o tom de voz e regras de conduta da Sofia</p>
+                      <p className="text-xs text-[#667781]">Configure o tom de voz e regras de conduta da Zapella</p>
                     </div>
                     <span className="px-3 py-1 rounded-full bg-emerald-100 text-[#128C7E] text-xs font-bold">
                       ● Atendente Ativo
@@ -429,7 +429,7 @@ export default function LandingPage() {
                   <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-2 text-xs">
                     <label className="font-bold text-[#111B21] block">Instruções Customizadas da Empresa</label>
                     <div className="p-3 bg-slate-50 rounded-lg font-mono text-[11px] text-slate-700 border border-slate-200">
-                      "Você é a Sofia, secretária da Clínica Saúde Total. Nosso horário é de seg a sex das 08h às 19h. Sempre confirme o nome do paciente antes de agendar qualquer consulta."
+                      "Você é a Zapella, secretária da Clínica Saúde Total. Nosso horário é de seg a sex das 08h às 19h. Sempre confirme o nome do paciente antes de agendar qualquer consulta."
                     </div>
                   </div>
                 </div>
@@ -504,7 +504,7 @@ export default function LandingPage() {
                       <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                         <div>
                           <span className="font-bold text-xs text-[#111B21]">Mariana Santos</span>
-                          <span className="text-[10px] text-[#128C7E] block">Sofia (IA) está atendendo • Confiança 98%</span>
+                          <span className="text-[10px] text-[#128C7E] block">Zapella (IA) está atendendo • Confiança 98%</span>
                         </div>
                         <span className="px-3 py-1 rounded-lg bg-amber-500 text-white text-[11px] font-bold">
                           Assumir Conversa
@@ -516,7 +516,7 @@ export default function LandingPage() {
                           Mariana: Olá, queria agendar uma consulta com o dermatologista para amanhã.
                         </div>
                         <div className="bg-[#D9FDD3] p-2.5 rounded-xl rounded-tr-none max-w-[80%] ml-auto text-slate-900">
-                          Sofia (IA): Olá Mariana! Temos horários disponíveis amanhã às 10h e às 15h30. Qual fica melhor para você?
+                          Zapella (IA): Olá Mariana! Temos horários disponíveis amanhã às 10h e às 15h30. Qual fica melhor para você?
                         </div>
                       </div>
 
