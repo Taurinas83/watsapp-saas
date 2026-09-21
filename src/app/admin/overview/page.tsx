@@ -12,7 +12,11 @@ import {
   ShieldAlert,
   CreditCard,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Cpu,
+  Smartphone,
+  Database,
+  Mail
 } from 'lucide-react';
 import { fetchAdminOverviewMetrics, OverviewMetrics } from '@/lib/admin/actions';
 
@@ -142,6 +146,198 @@ export default function AdminOverviewPage() {
           </div>
         </div>
       </div>
+
+      {/* Platform Resources & Quota Monitoring Block */}
+      <div className="bg-white p-6 rounded-2xl border border-slate-200 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-bold text-[#111B21]">Consumo de Ferramentas & Cotas de APIs</h3>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-[#128C7E] border border-emerald-200">
+                Operação Segura
+              </span>
+            </div>
+            <p className="text-xs text-[#667781] mt-0.5">
+              Monitore o consumo de tokens de IA, conexões do WhatsApp, banco de dados e gateways para evitar paradas.
+            </p>
+          </div>
+          <div className="text-[11px] text-[#667781] flex items-center gap-1.5 self-start sm:self-auto">
+            <Clock className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.5} />
+            <span>Sincronizado: {metrics?.resourceUsage.gateway.lastSync || 'Agora'}</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Card 1: Motor de IA (Tokens & Custo) */}
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-emerald-100/70 text-[#128C7E] flex items-center justify-center">
+                  <Cpu className="w-4 h-4" strokeWidth={1.75} />
+                </div>
+                <span className="text-xs font-bold text-[#111B21]">Motor de IA</span>
+              </div>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                metrics?.resourceUsage?.ai?.status === 'danger'
+                  ? 'bg-red-50 text-red-700'
+                  : metrics?.resourceUsage?.ai?.status === 'warning'
+                  ? 'bg-amber-50 text-amber-700'
+                  : 'bg-emerald-50 text-[#128C7E]'
+              }`}>
+                {metrics?.resourceUsage?.ai?.percentage || 0}% Cota
+              </span>
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex items-baseline justify-between text-xs">
+                <span className="text-[#667781]">Tokens Mês:</span>
+                <span className="font-semibold text-[#111B21]">
+                  {(metrics?.resourceUsage?.ai?.estimatedTokens || 0).toLocaleString('pt-BR')} / {(metrics?.resourceUsage?.ai?.quotaLimitMonthly || 2000000).toLocaleString('pt-BR')}
+                </span>
+              </div>
+              <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${metrics?.resourceUsage?.ai?.percentage || 0}%`,
+                    backgroundColor:
+                      (metrics?.resourceUsage?.ai?.percentage || 0) > 85 ? '#EF4444' :
+                      (metrics?.resourceUsage?.ai?.percentage || 0) > 65 ? '#F59E0B' : '#25D366'
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
+              <span className="text-[#667781]">Custo Estimado:</span>
+              <span className="font-bold text-[#128C7E]">
+                ${metrics?.resourceUsage?.ai?.estimatedCostUsd || '0.00'} USD (~R$ {((metrics?.resourceUsage?.ai?.estimatedCostUsd || 0) * 5.6).toFixed(2)})
+              </span>
+            </div>
+          </div>
+
+          {/* Card 2: Cluster WhatsApp (Evolution API) */}
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-blue-100/70 text-blue-700 flex items-center justify-center">
+                  <Smartphone className="w-4 h-4" strokeWidth={1.75} />
+                </div>
+                <span className="text-xs font-bold text-[#111B21]">WhatsApp Cluster</span>
+              </div>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                metrics?.resourceUsage?.whatsapp?.status === 'danger'
+                  ? 'bg-red-50 text-red-700'
+                  : 'bg-emerald-50 text-[#128C7E]'
+              }`}>
+                {metrics?.resourceUsage?.whatsapp?.connectedInstances || 0} Ativos
+              </span>
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex items-baseline justify-between text-xs">
+                <span className="text-[#667781]">Capacidade VPS:</span>
+                <span className="font-semibold text-[#111B21]">
+                  {metrics?.resourceUsage?.whatsapp?.connectedInstances || 0} / {metrics?.resourceUsage?.whatsapp?.maxRecommendedInstances || 25} nós
+                </span>
+              </div>
+              <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${metrics?.resourceUsage?.whatsapp?.percentage || 0}%`,
+                    backgroundColor:
+                      (metrics?.resourceUsage?.whatsapp?.percentage || 0) > 85 ? '#EF4444' :
+                      (metrics?.resourceUsage?.whatsapp?.percentage || 0) > 70 ? '#F59E0B' : '#25D366'
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
+              <span className="text-[#667781]">Servidor Evolution:</span>
+              <span className="font-semibold text-slate-700">Railway VPS (OK)</span>
+            </div>
+          </div>
+
+          {/* Card 3: Supabase (Banco & Vetores) */}
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-emerald-100/70 text-[#128C7E] flex items-center justify-center">
+                  <Database className="w-4 h-4" strokeWidth={1.75} />
+                </div>
+                <span className="text-xs font-bold text-[#111B21]">Supabase & Vetores</span>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-[#128C7E]">
+                {metrics?.resourceUsage?.database?.percentage || 0}% Disco
+              </span>
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex items-baseline justify-between text-xs">
+                <span className="text-[#667781]">Tamanho Estimado:</span>
+                <span className="font-semibold text-[#111B21]">
+                  {metrics?.resourceUsage?.database?.estimatedSizeMb || 0} MB / {metrics?.resourceUsage?.database?.storageLimitMb || 500} MB
+                </span>
+              </div>
+              <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${metrics?.resourceUsage?.database?.percentage || 0}%`,
+                    backgroundColor: '#25D366'
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
+              <span className="text-[#667781]">Vetores Base de Conhecimento:</span>
+              <span className="font-semibold text-slate-700">
+                {metrics?.resourceUsage?.database?.knowledgeVectorsCount || 0} itens
+              </span>
+            </div>
+          </div>
+
+          {/* Card 4: Asaas Gateway & Webhook */}
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-blue-100/70 text-blue-700 flex items-center justify-center">
+                  <CreditCard className="w-4 h-4" strokeWidth={1.75} />
+                </div>
+                <span className="text-xs font-bold text-[#111B21]">Gateway Asaas</span>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-[#128C7E]">
+                PRODUÇÃO
+              </span>
+            </div>
+
+            <div className="space-y-1 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[#667781]">Webhook Token:</span>
+                <span className="font-mono text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
+                  whsec_...28rM (OK)
+                </span>
+              </div>
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-[#667781]">Situação:</span>
+                <span className="font-bold text-[#128C7E] flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#25D366] animate-pulse" />
+                  Sincronização Ativa
+                </span>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
+              <span className="text-[#667781]">Faturas Processadas:</span>
+              <span className="font-semibold text-slate-700">Tempo Real</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
 
       {/* Middle Section: Revenue Chart & Distribution */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

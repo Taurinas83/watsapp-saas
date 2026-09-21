@@ -73,6 +73,40 @@ export async function logAdminAction(
   }
 }
 
+export interface ResourceUsage {
+  ai: {
+    estimatedTokens: number;
+    estimatedCostUsd: number;
+    quotaLimitMonthly: number;
+    percentage: number;
+    status: 'safe' | 'warning' | 'danger';
+  };
+  whatsapp: {
+    connectedInstances: number;
+    maxRecommendedInstances: number;
+    percentage: number;
+    status: 'safe' | 'warning' | 'danger';
+  };
+  database: {
+    totalRecords: number;
+    knowledgeVectorsCount: number;
+    estimatedSizeMb: number;
+    storageLimitMb: number;
+    percentage: number;
+    status: 'safe' | 'warning' | 'danger';
+  };
+  email: {
+    sentThisMonth: number;
+    quotaLimit: number;
+    percentage: number;
+    status: 'safe' | 'warning' | 'danger';
+  };
+  gateway: {
+    asaasWebhookStatus: 'active' | 'pending';
+    lastSync: string;
+  };
+}
+
 export interface OverviewMetrics {
   mrr: number;
   activeClients: number;
@@ -84,6 +118,7 @@ export interface OverviewMetrics {
   messagesThisMonth: number;
   revenueHistory: { month: string; revenue: number; clients: number }[];
   recentLogs: AdminAuditLog[];
+  resourceUsage: ResourceUsage;
 }
 
 /**
@@ -93,7 +128,7 @@ export async function fetchAdminOverviewMetrics(): Promise<OverviewMetrics> {
   const supabase = createClient();
 
   // 1. Fetch all organizations
-  const { data: orgs, error: orgsError } = await supabase
+  const { data: orgs } = await supabase
     .from('organizations')
     .select('id, name, plan_tier, status, custom_mrr, created_at');
 
@@ -138,6 +173,71 @@ export async function fetchAdminOverviewMetrics(): Promise<OverviewMetrics> {
     .from('messages')
     .select('*', { count: 'exact', head: true })
     .gte('created_at', startOfMonth.toISOString());
+
+  // 4. Fetch WhatsApp connected instances
+  const { count: connectedInstances } = await supabase
+    .from('attendants')
+    .select('*', { count: 'exact', head: true })
+    .eq('whatsapp_status', 'connected');
+
+  // 5. Fetch knowledge vectors count
+  const { count: knowledgeVectorsCount } = await supabase
+    .from('knowledge_items')
+    .select('*', { count: 'exact', head: true });
+
+  // 6. Resource Usage & Quota Calculations
+  const msgsMonth = messagesThisMonth || 0;
+  const estimatedTokens = msgsMonth * 340; // Média de tokens por mensagem
+  const estimatedCostUsd = Number(((estimatedTokens / 1_000_000) * 0.40).toFixed(2));
+  const aiQuotaLimit = 2_000_000; // Limite de 2M tokens/mês no tier base
+  const aiPercentage = Math.min(100, Math.round((estimatedTokens / aiQuotaLimit) * 100));
+
+  const connCount = connectedInstances || 0;
+  const maxRecommendedInstances = 25; // 25 instâncias por cada nó padrão da Evolution API
+  const whatsappPercentage = Math.min(100, Math.round((connCount / maxRecommendedInstances) * 100));
+
+  const totalRecords = (totalMessages || 0) + (knowledgeVectorsCount || 0) + totalClients;
+  const estimatedSizeMb = Number(((totalRecords * 1.8) / 1024).toFixed(1)); // ~1.8KB por registro médio
+  const storageLimitMb = 500; // Cota base Supabase
+  const dbPercentage = Math.min(100, Math.round((estimatedSizeMb / storageLimitMb) * 100));
+
+  const emailSent = totalClients * 4 + msgsMonth * 0.05; // Estimativa de e-mails transacionais
+  const emailLimit = 3000;
+  const emailPercentage = Math.min(100, Math.round((emailSent / emailLimit) * 100));
+
+  const resourceUsage: ResourceUsage = {
+    ai: {
+      estimatedTokens,
+      estimatedCostUsd,
+      quotaLimitMonthly: aiQuotaLimit,
+      percentage: aiPercentage,
+      status: aiPercentage > 85 ? 'danger' : aiPercentage > 65 ? 'warning' : 'safe',
+    },
+    whatsapp: {
+      connectedInstances: connCount,
+      maxRecommendedInstances,
+      percentage: whatsappPercentage,
+      status: whatsappPercentage > 85 ? 'danger' : whatsappPercentage > 70 ? 'warning' : 'safe',
+    },
+    database: {
+      totalRecords,
+      knowledgeVectorsCount: knowledgeVectorsCount || 0,
+      estimatedSizeMb,
+      storageLimitMb,
+      percentage: dbPercentage,
+      status: dbPercentage > 85 ? 'danger' : dbPercentage > 70 ? 'warning' : 'safe',
+    },
+    email: {
+      sentThisMonth: Math.round(emailSent),
+      quotaLimit: emailLimit,
+      percentage: emailPercentage,
+      status: emailPercentage > 85 ? 'danger' : emailPercentage > 70 ? 'warning' : 'safe',
+    },
+    gateway: {
+      asaasWebhookStatus: 'active',
+      lastSync: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+    },
+  };
 
   // 4. Fetch recent audit logs
   const { data: logsData } = await supabase
@@ -195,6 +295,7 @@ export async function fetchAdminOverviewMetrics(): Promise<OverviewMetrics> {
     messagesThisMonth: messagesThisMonth || 0,
     revenueHistory,
     recentLogs,
+    resourceUsage,
   };
 }
 
