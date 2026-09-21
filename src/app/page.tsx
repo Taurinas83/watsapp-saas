@@ -17,13 +17,22 @@ import {
   TrendingUp,
   Headphones,
   Check,
-  Sparkles
+  Sparkles,
+  BookOpen,
+  QrCode,
+  Eye,
+  UserCheck,
+  Cpu,
+  Layers,
+  Sliders,
+  Play
 } from 'lucide-react';
 import { WhatsAppSimulatorModal } from '@/components/WhatsAppSimulatorModal';
 
 export default function LandingPage() {
   const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
+  const [activeTab, setActiveTab] = useState<'attendant' | 'knowledge' | 'inbox' | 'whatsapp'>('attendant');
 
   const faqs = [
     {
@@ -48,7 +57,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-white text-[#171901] flex flex-col font-sans">
 
       {/* ── Top Navbar ── */}
-      <nav className="h-18 border-b border-[#E0E3E1]/80 px-6 lg:px-14 flex items-center justify-between sticky top-0 bg-white/95 backdrop-blur-md z-40 shadow-sm">
+      <nav className="py-4 border-b border-[#E0E3E1]/80 px-6 lg:px-14 flex items-center justify-between sticky top-0 bg-white/95 backdrop-blur-md z-40 shadow-sm">
         <Link href="/" className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl overflow-hidden shadow-md shrink-0"
                style={{ background: 'linear-gradient(135deg, #00E676 0%, #7C4DFF 100%)' }}>
@@ -57,8 +66,10 @@ export default function LandingPage() {
           <span className="font-extrabold text-[#171901] text-lg tracking-tight">Zapella</span>
         </Link>
 
-        <div className="hidden md:flex items-center gap-8 text-xs font-semibold text-[#4D4D61]">
+        <div className="hidden md:flex items-center gap-6 text-xs font-semibold text-[#4D4D61]">
           <a href="#beneficios" className="hover:text-[#2E7D5A] transition-colors">Benefícios</a>
+          <a href="#diferenciais" className="hover:text-[#2E7D5A] transition-colors">Diferenciais</a>
+          <a href="#telas" className="hover:text-[#2E7D5A] transition-colors">O Sistema</a>
           <a href="#como-funciona" className="hover:text-[#2E7D5A] transition-colors">Como Funciona</a>
           <a href="#planos" className="hover:text-[#2E7D5A] transition-colors">Planos & Preços</a>
           <a href="#faq" className="hover:text-[#2E7D5A] transition-colors">FAQ</a>
@@ -200,6 +211,91 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── Exclusives & Differentiators ── */}
+      <section id="diferenciais" className="py-20 px-6 lg:px-14 bg-[#F8FAF9] border-t border-[#E0E3E1]">
+        <div className="max-w-7xl mx-auto space-y-12">
+          <div className="text-center max-w-2xl mx-auto">
+            <p className="text-xs font-extrabold uppercase tracking-widest mb-2" style={{ color: '#2E7D5A' }}>
+              Diferenciais Exclusivos
+            </p>
+            <h2 className="text-3xl font-bold text-[#171901]">
+              O que torna a Zapella superior a chatbots comuns?
+            </h2>
+            <p className="text-xs text-[#4D4D61] mt-3">
+              Construída para empresas que precisam de atendimento sério, preciso e sem respostas inventadas.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Diff 1: RAG Sem Alucinações */}
+            <div className="p-7 rounded-3xl bg-white border border-[#E0E3E1] space-y-3 hover:border-[#00E676] transition-all shadow-xs">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-[#128C7E] flex items-center justify-center">
+                <BookOpen className="w-5 h-5" strokeWidth={1.75} />
+              </div>
+              <h3 className="text-sm font-bold text-[#171901]">RAG Sem Alucinações</h3>
+              <p className="text-xs text-[#4D4D61] leading-relaxed">
+                A IA responde estritamente o que você ensinou na Base de Conhecimento. Nunca inventa preços, prazos ou promoções inexistentes.
+              </p>
+            </div>
+
+            {/* Diff 2: Transferência Imediata */}
+            <div className="p-7 rounded-3xl bg-white border border-[#E0E3E1] space-y-3 hover:border-[#00E676] transition-all shadow-xs">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-[#128C7E] flex items-center justify-center">
+                <UserCheck className="w-5 h-5" strokeWidth={1.75} />
+              </div>
+              <h3 className="text-sm font-bold text-[#171901]">Handover Inteligente</h3>
+              <p className="text-xs text-[#4D4D61] leading-relaxed">
+                Configure palavras-chave como "cancelar", "humano" ou "urgente". O bot pausa instantaneamente e transfere para sua equipe.
+              </p>
+            </div>
+
+            {/* Diff 3: Modo Copiloto */}
+            <div className="p-7 rounded-3xl bg-white border border-[#E0E3E1] space-y-3 hover:border-[#00E676] transition-all shadow-xs">
+              <div className="w-10 h-10 rounded-xl bg-purple-50 text-[#7C4DFF] flex items-center justify-center">
+                <Sparkles className="w-5 h-5" strokeWidth={1.75} />
+              </div>
+              <h3 className="text-sm font-bold text-[#171901]">Modo Copiloto para a Equipe</h3>
+              <p className="text-xs text-[#4D4D61] leading-relaxed">
+                A IA redige sugestões de respostas perfeitas dentro da Inbox. Seu atendente humano apenas revisa e envia com 1 clique.
+              </p>
+            </div>
+
+            {/* Diff 4: Conexão QR Code */}
+            <div className="p-7 rounded-3xl bg-white border border-[#E0E3E1] space-y-3 hover:border-[#00E676] transition-all shadow-xs">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                <QrCode className="w-5 h-5" strokeWidth={1.75} />
+              </div>
+              <h3 className="text-sm font-bold text-[#171901]">Conexão QR Code em 30s</h3>
+              <p className="text-xs text-[#4D4D61] leading-relaxed">
+                Zero burocracia de validação no Facebook Meta. Conecte qualquer WhatsApp comercial existente como se fosse o WhatsApp Web.
+              </p>
+            </div>
+
+            {/* Diff 5: Supervisão em Tempo Real */}
+            <div className="p-7 rounded-3xl bg-white border border-[#E0E3E1] space-y-3 hover:border-[#00E676] transition-all shadow-xs">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                <Eye className="w-5 h-5" strokeWidth={1.75} />
+              </div>
+              <h3 className="text-sm font-bold text-[#171901]">Supervisão & Auditoria</h3>
+              <p className="text-xs text-[#4D4D61] leading-relaxed">
+                Acompanhe o grau de confiança de cada resposta da IA, métricas de tempo de resposta e assuma conversas a qualquer momento.
+              </p>
+            </div>
+
+            {/* Diff 6: 100% em Nuvem 24/7 */}
+            <div className="p-7 rounded-3xl bg-white border border-[#E0E3E1] space-y-3 hover:border-[#00E676] transition-all shadow-xs">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-[#128C7E] flex items-center justify-center">
+                <Cpu className="w-5 h-5" strokeWidth={1.75} />
+              </div>
+              <h3 className="text-sm font-bold text-[#171901]">100% em Nuvem 24/7</h3>
+              <p className="text-xs text-[#4D4D61] leading-relaxed">
+                Seu celular ficou sem bateria ou sem sinal? A Zapella continua respondendo sem parar nos servidores de alta disponibilidade.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── How It Works ── */}
       <section id="como-funciona" className="py-20 px-6 lg:px-14" style={{ background: '#F4F5F4' }}>
         <div className="max-w-7xl mx-auto space-y-12">
@@ -223,6 +319,266 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* ── Product Showcase / Prints do Sistema ── */}
+      <section id="telas" className="py-20 px-6 lg:px-14 bg-white border-t border-[#E0E3E1]">
+        <div className="max-w-7xl mx-auto space-y-10">
+          <div className="text-center max-w-2xl mx-auto">
+            <p className="text-xs font-extrabold uppercase tracking-widest mb-2" style={{ color: '#2E7D5A' }}>
+              Tour pelo Sistema
+            </p>
+            <h2 className="text-3xl font-bold text-[#171901]">
+              Interface limpa, moderna e fácil de usar
+            </h2>
+            <p className="text-xs text-[#4D4D61] mt-2">
+              Veja por dentro como o painel da Zapella simplifica o dia a dia do seu negócio.
+            </p>
+          </div>
+
+          {/* Tabs Selector */}
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {[
+              { id: 'attendant', label: 'Identidade do Atendente', icon: Bot },
+              { id: 'knowledge', label: 'Base de Conhecimento (RAG)', icon: BookOpen },
+              { id: 'inbox', label: 'Inbox & Supervisão ao Vivo', icon: MessageSquare },
+              { id: 'whatsapp', label: 'Conexão WhatsApp', icon: QrCode },
+            ].map((tab) => {
+              const Icon = tab.icon;
+              const isSelected = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                    isSelected
+                      ? 'bg-[#171901] text-white shadow-md'
+                      : 'bg-[#F4F5F4] text-[#4D4D61] hover:text-[#171901] hover:bg-slate-200'
+                  }`}
+                >
+                  <Icon className={`w-4 h-4 ${isSelected ? 'text-[#00E676]' : 'text-[#4D4D61]'}`} strokeWidth={1.75} />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Interactive Screen Mockup */}
+          <div className="max-w-5xl mx-auto bg-slate-900 rounded-3xl p-3 sm:p-4 shadow-2xl border border-slate-700">
+            {/* Window Header */}
+            <div className="flex items-center justify-between px-3 py-2 border-b border-slate-800 text-xs text-slate-400 mb-4">
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-red-500/80 inline-block" />
+                <span className="w-3 h-3 rounded-full bg-amber-500/80 inline-block" />
+                <span className="w-3 h-3 rounded-full bg-emerald-500/80 inline-block" />
+              </div>
+              <div className="font-mono text-[11px] bg-slate-800 px-4 py-1 rounded-lg text-slate-300">
+                https://app.zapella.com.br/dashboard/{activeTab}
+              </div>
+              <div className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">
+                ● Ao Vivo
+              </div>
+            </div>
+
+            {/* Mockup Screen Contents */}
+            <div className="bg-[#F0F2F5] rounded-2xl p-6 text-[#111B21] min-h-[420px]">
+              {activeTab === 'attendant' && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+                    <div>
+                      <h4 className="text-sm font-bold text-[#111B21]">Identidade do Atendente Virtual</h4>
+                      <p className="text-xs text-[#667781]">Configure o tom de voz e regras de conduta da Sofia</p>
+                    </div>
+                    <span className="px-3 py-1 rounded-full bg-emerald-100 text-[#128C7E] text-xs font-bold">
+                      ● Atendente Ativo
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                    <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-3">
+                      <label className="font-bold text-[#111B21] block">Personalidade Selecionada</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="p-2.5 rounded-lg border-2 border-[#25D366] bg-emerald-50 text-center font-bold text-[#128C7E]">
+                          Amigável
+                        </div>
+                        <div className="p-2.5 rounded-lg border border-slate-200 text-center text-slate-600">
+                          Profissional
+                        </div>
+                        <div className="p-2.5 rounded-lg border border-slate-200 text-center text-slate-600">
+                          Descontraído
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-[#667781]">
+                        Tom de voz atencioso, acolhedor e com uso suave de emojis humanizados.
+                      </p>
+                    </div>
+
+                    <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
+                      <label className="font-bold text-[#111B21] block">Palavras-chave de Transferência Imediata</label>
+                      <div className="flex flex-wrap gap-1.5">
+                        <span className="bg-slate-100 px-2 py-1 rounded-md text-[11px] font-semibold text-slate-700">falar com atendente</span>
+                        <span className="bg-slate-100 px-2 py-1 rounded-md text-[11px] font-semibold text-slate-700">cancelar</span>
+                        <span className="bg-slate-100 px-2 py-1 rounded-md text-[11px] font-semibold text-slate-700">doutor</span>
+                        <span className="bg-slate-100 px-2 py-1 rounded-md text-[11px] font-semibold text-slate-700">urgente</span>
+                      </div>
+                      <p className="text-[11px] text-[#667781]">
+                        Ao detectar esses termos, a IA pausa na hora e notifica sua equipe.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-2 text-xs">
+                    <label className="font-bold text-[#111B21] block">Instruções Customizadas da Empresa</label>
+                    <div className="p-3 bg-slate-50 rounded-lg font-mono text-[11px] text-slate-700 border border-slate-200">
+                      "Você é a Sofia, secretária da Clínica Saúde Total. Nosso horário é de seg a sex das 08h às 19h. Sempre confirme o nome do paciente antes de agendar qualquer consulta."
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'knowledge' && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+                    <div>
+                      <h4 className="text-sm font-bold text-[#111B21]">Base de Conhecimento RAG</h4>
+                      <p className="text-xs text-[#667781]">Dados que a IA consulta para responder seus clientes com 100% de exatidão</p>
+                    </div>
+                    <span className="px-3 py-1.5 rounded-xl bg-[#128C7E] text-white text-xs font-bold shadow-sm">
+                      + Adicionar Pergunta / FAQ
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {[
+                      { cat: 'Preços & Planos', q: 'Quanto custa a consulta presencial e online?', a: 'A consulta presencial é R$ 250,00 e a teleconsulta é R$ 190,00 com retorno em até 15 dias incluso.' },
+                      { cat: 'Horários', q: 'Qual o horário de funcionamento da clínica?', a: 'Atendemos de segunda a sexta das 08h às 19h e aos sábados das 08h às 13h.' },
+                      { cat: 'Formas de Pagamento', q: 'Vocês aceitam convênios médicos ou Pix?', a: 'Aceitamos Pix com 5% de desconto, cartões de crédito em até 3x e emitimos recibo para reembolso.' }
+                    ].map((item, i) => (
+                      <div key={i} className="bg-white p-4 rounded-xl border border-slate-200 space-y-1.5 shadow-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-[#128C7E] bg-emerald-50 px-2 py-0.5 rounded">
+                            {item.cat}
+                          </span>
+                          <span className="text-[10px] text-slate-400">Sincronizado na IA</span>
+                        </div>
+                        <p className="text-xs font-bold text-[#111B21]">{item.q}</p>
+                        <p className="text-xs text-[#667781] leading-relaxed">{item.a}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'inbox' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                    <div>
+                      <h4 className="text-sm font-bold text-[#111B21]">Caixa de Entrada Unificada (Inbox)</h4>
+                      <p className="text-xs text-[#667781]">Supervisão de conversas ao vivo e intervenção com 1 clique</p>
+                    </div>
+                    <span className="px-3 py-1 rounded-full bg-emerald-100 text-[#128C7E] text-xs font-bold">
+                      ● 3 Conversas em Andamento
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Chat list */}
+                    <div className="bg-white rounded-xl border border-slate-200 p-2 space-y-1 text-xs">
+                      <div className="p-2.5 rounded-lg bg-emerald-50/80 border border-emerald-200 cursor-pointer">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-[#111B21]">Mariana Santos</span>
+                          <span className="text-[10px] text-slate-400">14:32</span>
+                        </div>
+                        <p className="text-[11px] text-[#128C7E] truncate font-medium">IA: Olá Mariana! Temos horário amanhã...</p>
+                      </div>
+                      <div className="p-2.5 rounded-lg hover:bg-slate-50 border border-transparent cursor-pointer">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-[#111B21]">Carlos Eduardo</span>
+                          <span className="text-[10px] text-slate-400">14:15</span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 truncate">Carlos: Qual o endereço de vocês?</p>
+                      </div>
+                    </div>
+
+                    {/* Chat view */}
+                    <div className="md:col-span-2 bg-white rounded-xl border border-slate-200 p-4 flex flex-col justify-between space-y-3">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                        <div>
+                          <span className="font-bold text-xs text-[#111B21]">Mariana Santos</span>
+                          <span className="text-[10px] text-[#128C7E] block">Sofia (IA) está atendendo • Confiança 98%</span>
+                        </div>
+                        <span className="px-3 py-1 rounded-lg bg-amber-500 text-white text-[11px] font-bold">
+                          Assumir Conversa
+                        </span>
+                      </div>
+
+                      <div className="space-y-2 text-xs">
+                        <div className="bg-slate-100 p-2.5 rounded-xl rounded-tl-none max-w-[80%] text-slate-800">
+                          Mariana: Olá, queria agendar uma consulta com o dermatologista para amanhã.
+                        </div>
+                        <div className="bg-[#D9FDD3] p-2.5 rounded-xl rounded-tr-none max-w-[80%] ml-auto text-slate-900">
+                          Sofia (IA): Olá Mariana! Temos horários disponíveis amanhã às 10h e às 15h30. Qual fica melhor para você?
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-100 text-[11px] text-slate-400">
+                        Pressione para responder manualmente ou deixe a IA continuar.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'whatsapp' && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+                    <div>
+                      <h4 className="text-sm font-bold text-[#111B21]">Conexão com WhatsApp</h4>
+                      <p className="text-xs text-[#667781]">Conecte seu WhatsApp comercial em segundos via QR Code</p>
+                    </div>
+                    <span className="px-3 py-1 rounded-full bg-emerald-100 text-[#128C7E] text-xs font-bold">
+                      ● WhatsApp Conectado
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                    <div className="bg-white p-6 rounded-xl border border-slate-200 space-y-4 text-xs">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-100 text-[#128C7E] flex items-center justify-center">
+                          <CheckCircle2 className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-[#111B21]">+55 (11) 98765-4321</p>
+                          <p className="text-[11px] text-[#128C7E]">Instância Ativa & Respondendo 24/7</p>
+                        </div>
+                      </div>
+
+                      <div className="pt-3 border-t border-slate-100 space-y-2">
+                        <div className="flex items-center justify-between text-slate-600">
+                          <span>Nuvem Zapella:</span>
+                          <span className="font-bold text-[#128C7E]">100% Operacional</span>
+                        </div>
+                        <div className="flex items-center justify-between text-slate-600">
+                          <span>Tempo médio de resposta:</span>
+                          <span className="font-bold text-[#111B21]">2.4 segundos</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-xl border border-slate-200 text-center space-y-3">
+                      <div className="w-32 h-32 mx-auto bg-slate-50 rounded-xl border border-dashed border-slate-300 flex items-center justify-center">
+                        <QrCode className="w-20 h-20 text-slate-400" strokeWidth={1.5} />
+                      </div>
+                      <p className="text-xs font-semibold text-slate-700">QR Code escaneado com sucesso</p>
+                      <p className="text-[11px] text-slate-400">Caso deseje trocar de aparelho, basta desconectar e ler um novo código.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
 
       {/* ── Pricing Section ── */}
       <section id="planos" className="py-20 px-6 lg:px-14">
