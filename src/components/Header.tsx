@@ -9,6 +9,7 @@ import {
   Bell
 } from 'lucide-react';
 import { getCurrentUserOrganizationId, fetchAttendant, toggleBotPause } from '@/lib/supabase/actions';
+import { createClient } from '@/lib/supabase/client';
 
 interface HeaderProps {
   title: string;
@@ -19,11 +20,39 @@ export function Header({ title, subtitle }: HeaderProps) {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [orgId, setOrgId] = useState('');
+  const [companyName, setCompanyName] = useState('Minha Empresa');
+  const [initials, setInitials] = useState('ZP');
+  const [isImpersonating, setIsImpersonating] = useState(false);
 
   useEffect(() => {
     async function loadBotStatus() {
       const currentOrgId = await getCurrentUserOrganizationId();
       setOrgId(currentOrgId);
+
+      if (typeof window !== 'undefined') {
+        const impersonated = localStorage.getItem('zapella_impersonate_org');
+        if (impersonated) {
+          setIsImpersonating(true);
+        }
+      }
+
+      const supabase = createClient();
+      const { data: org } = await supabase
+        .from('organizations')
+        .select('name')
+        .eq('id', currentOrgId)
+        .single();
+
+      if (org?.name) {
+        setCompanyName(org.name);
+        const words = org.name.trim().split(/\s+/);
+        if (words.length >= 2) {
+          setInitials((words[0][0] + words[1][0]).toUpperCase());
+        } else if (words.length === 1 && words[0].length >= 2) {
+          setInitials(words[0].slice(0, 2).toUpperCase());
+        }
+      }
+
       const attendant = await fetchAttendant(currentOrgId);
       if (attendant) {
         setIsPaused(attendant.is_paused || false);
@@ -96,11 +125,13 @@ export function Header({ title, subtitle }: HeaderProps) {
                 className="w-8 h-8 rounded-full flex items-center justify-center text-[#171901] font-bold text-xs"
                 style={{ background: 'linear-gradient(135deg, #00E676 0%, #7C4DFF 100%)', color: 'white' }}
               >
-                ZP
+                {initials}
               </div>
               <div className="text-left hidden sm:block">
-                <p className="text-xs font-semibold text-[#171901] leading-tight">Minha Empresa</p>
-                <p className="text-[10px] text-[#4D4D61] font-medium">Administrador</p>
+                <p className="text-xs font-semibold text-[#171901] leading-tight truncate max-w-[140px]">{companyName}</p>
+                <p className="text-[10px] text-[#4D4D61] font-medium">
+                  {isImpersonating ? 'Visão do Cliente' : 'Administrador'}
+                </p>
               </div>
               <ChevronDown className="w-3.5 h-3.5 text-[#4D4D61]" />
             </button>
@@ -109,7 +140,7 @@ export function Header({ title, subtitle }: HeaderProps) {
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-[#E0E3E1] py-1 z-50">
                 <div className="px-4 py-2 border-b border-[#E0E3E1]">
                   <p className="text-xs font-semibold text-[#171901]">Empresa Ativa</p>
-                  <p className="text-xs text-[#4D4D61] truncate">Minha Empresa</p>
+                  <p className="text-xs text-[#4D4D61] truncate">{companyName}</p>
                 </div>
                 <a href="/dashboard/settings" className="flex items-center gap-2 px-4 py-2 text-xs text-[#4D4D61] hover:bg-[#F4F5F4]">
                   <User className="w-3.5 h-3.5 text-[#4D4D61]" />

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
-import { Clock, Bell, Save, Check, Mail, Smartphone, Loader2, User, Building2, ShieldCheck } from 'lucide-react';
+import { Clock, Bell, Save, Check, Mail, Smartphone, Loader2, User, Building2, ShieldCheck, Lock, KeyRound } from 'lucide-react';
 import { getCurrentUserOrganizationId, fetchOrganizationSettings, updateOrganizationSettings } from '@/lib/supabase/actions';
 import { createClient } from '@/lib/supabase/client';
 import { DEFAULT_ORG_ID } from '@/lib/constants';
@@ -33,12 +33,20 @@ export default function GeneralSettingsPage() {
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [profileSuccess, setProfileSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isImpersonating, setIsImpersonating] = useState(false);
 
   // Profile State
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [planTier, setPlanTier] = useState('starter');
+
+  // Password Change State
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   // Business Hours State
   const [schedule, setSchedule] = useState<ScheduleDay[]>(defaultSchedule);
@@ -57,27 +65,49 @@ export default function GeneralSettingsPage() {
         const currentOrgId = await getCurrentUserOrganizationId();
         setOrgId(currentOrgId);
 
-        const supabase = createClient();
-
-        // Carregar usuário logado e perfil
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          setUserId(user.id);
-          setEmail(user.email || '');
-          const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-          if (profile) {
-            setFullName(profile.full_name || '');
+        if (typeof window !== 'undefined') {
+          const impersonated = localStorage.getItem('zapella_impersonate_org');
+          if (impersonated) {
+            setIsImpersonating(true);
           }
         }
 
-        // Carregar organização
+        const supabase = createClient();
+
+        // 1. Carregar organização
         const { data: org } = await supabase.from('organizations').select('name, plan_tier').eq('id', currentOrgId).single();
         if (org) {
           setCompanyName(org.name || '');
           setPlanTier(org.plan_tier || 'starter');
         }
 
-        // Carregar configurações de horário e notificações
+        // 2. Carregar perfil vinculado a esta organização (exibe os dados do cliente real)
+        const { data: orgProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('organization_id', currentOrgId)
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .maybeSingle();
+
+        if (orgProfile) {
+          setUserId(orgProfile.id);
+          setEmail(orgProfile.email || '');
+          setFullName(orgProfile.full_name || '');
+        } else {
+          // Fallback para o usuário logado
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            setUserId(user.id);
+            setEmail(user.email || '');
+            const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+            if (profile) {
+              setFullName(profile.full_name || '');
+            }
+          }
+        }
+
+        // 3. Carregar configurações de horário e notificações
         const data = await fetchOrganizationSettings(currentOrgId);
         if (data) {
           if (data.schedule && Array.isArray(data.schedule)) {
@@ -122,6 +152,42 @@ export default function GeneralSettingsPage() {
       console.error('Erro ao salvar perfil:', err);
     } finally {
       setIsSavingProfile(false);
+    }
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError(null);
+    setPasswordSuccess(false);
+
+    if (isImpersonating) {
+      setPasswordError('Em modo de impersonação, utilize o God Mode (/admin/clients) para redefinir a senha do assinante.');
+      return;
+    }
+
+    if (!newPassword || newPassword.length < 6) {
+      setPasswordError('A nova senha deve conter no mínimo 6 caracteres.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('As senhas digitadas não coincidem.');
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      setPasswordSuccess(true);
+      setNewPassword('');
+      setConfirmPassword('');
+      setTimeout(() => setPasswordSuccess(false), 4000);
+    } catch (err: any) {
+      setPasswordError(err.message || 'Erro ao atualizar a senha.');
+    } finally {
+      setIsUpdatingPassword(false);
     }
   };
 
@@ -262,6 +328,80 @@ export default function GeneralSettingsPage() {
               <span>{isSavingProfile ? 'Salvando Perfil...' : 'Salvar Dados do Perfil'}</span>
             </button>
           </div>
+        </div>
+
+        {/* Password & Security Card */}
+        <div className="bg-white p-6 rounded-2xl border border-[#E0E3E1] shadow-sm space-y-4">
+          <div className="flex items-center gap-2 text-[#171901] font-bold text-sm pb-3 border-b border-[#E0E3E1]">
+            <Lock className="w-4 h-4" style={{ color: '#2E7D5A' }} />
+            <span>Segurança & Alteração de Senha</span>
+          </div>
+
+          {isImpersonating ? (
+            <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800 space-y-1.5">
+              <div className="flex items-center gap-2 font-bold text-amber-900">
+                <KeyRound className="w-4 h-4 text-amber-600" />
+                <span>Modo de Suporte / Impersonação Ativo</span>
+              </div>
+              <p className="leading-relaxed">
+                Você está navegando como suporte no painel deste cliente. Para alterar ou redefinir a senha de acesso deste assinante, utilize a ferramenta de suporte no <strong>Painel God Mode (/admin/clients)</strong>.
+              </p>
+            </div>
+          ) : (
+            <form onSubmit={handleUpdatePassword} className="space-y-4">
+              <p className="text-xs text-[#4D4D61]">
+                Altere sua senha de acesso a qualquer momento. A nova senha deve ter no mínimo 6 caracteres.
+              </p>
+
+              {passwordSuccess && (
+                <div className="bg-[#F4F5F4] border border-[#00E676] text-[#2E7D5A] px-4 py-2.5 rounded-xl flex items-center gap-2 text-xs font-semibold animate-in fade-in-50">
+                  <Check className="w-4 h-4 text-[#00E676]" />
+                  <span>Sua senha foi atualizada com sucesso!</span>
+                </div>
+              )}
+
+              {passwordError && (
+                <div className="bg-rose-50 border border-rose-200 text-rose-700 px-4 py-2.5 rounded-xl text-xs font-semibold">
+                  <span>{passwordError}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-[#171901] mb-1">Nova Senha</label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full bg-[#F4F5F4] border border-[#E0E3E1] rounded-xl px-3.5 py-2.5 text-xs text-[#171901] focus:outline-none focus:border-[#00E676]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#171901] mb-1">Confirmar Nova Senha</label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full bg-[#F4F5F4] border border-[#E0E3E1] rounded-xl px-3.5 py-2.5 text-xs text-[#171901] focus:outline-none focus:border-[#00E676]"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <button
+                  type="submit"
+                  disabled={isUpdatingPassword}
+                  className="px-5 py-2.5 rounded-xl bg-[#171901] hover:bg-[#4D4D61] text-white text-xs font-bold transition-all shadow-sm flex items-center gap-2"
+                >
+                  <KeyRound className="w-3.5 h-3.5" />
+                  <span>{isUpdatingPassword ? 'Atualizando...' : 'Atualizar Minha Senha'}</span>
+                </button>
+              </div>
+            </form>
+          )}
         </div>
 
         <form onSubmit={handleSave} className="space-y-6">

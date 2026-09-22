@@ -22,13 +22,15 @@ import {
   RotateCcw,
   Check,
   X,
-  Clock
+  Clock,
+  KeyRound
 } from 'lucide-react';
 import {
   fetchAdminTenants,
   updateTenantStatus,
   updateTenantPlan,
   updateTenantComplete,
+  adminResetUserPassword,
   TenantListItem,
   PLAN_PRICES
 } from '@/lib/admin/actions';
@@ -62,6 +64,38 @@ export default function AdminClientsPage() {
   const [editCustomMrr, setEditCustomMrr] = useState<number>(97);
   const [editTrialEndsAt, setEditTrialEndsAt] = useState('');
   const [editSuspendedReason, setEditSuspendedReason] = useState('');
+
+  // Password reset state (Support)
+  const [resetPasswordVal, setResetPasswordVal] = useState('');
+  const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
+  const [resetPasswordSuccess, setResetPasswordSuccess] = useState(false);
+
+  const handleResetPassword = async () => {
+    if (!selectedTenant?.profileId) {
+      alert('Perfil do assinante não encontrado.');
+      return;
+    }
+    if (!resetPasswordVal || resetPasswordVal.length < 6) {
+      alert('A nova senha deve ter no mínimo 6 caracteres.');
+      return;
+    }
+    setResetPasswordLoading(true);
+    try {
+      const ok = await adminResetUserPassword(selectedTenant.profileId, resetPasswordVal);
+      if (ok) {
+        setResetPasswordSuccess(true);
+        setResetPasswordVal('');
+        setTimeout(() => setResetPasswordSuccess(false), 6000);
+      } else {
+        alert('Falha ao redefinir a senha do usuário. Verifique se o perfil existe no Auth.');
+      }
+    } catch (e) {
+      console.error('Erro ao redefinir senha:', e);
+      alert('Erro ao redefinir senha.');
+    } finally {
+      setResetPasswordLoading(false);
+    }
+  };
 
   const loadTenants = async () => {
     setLoading(true);
@@ -593,6 +627,45 @@ export default function AdminClientsPage() {
                   />
                 </div>
               )}
+
+              {/* Redefinição de Senha (Suporte) */}
+              <div className="p-3.5 rounded-xl bg-amber-50/50 border border-amber-200/70 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="font-semibold text-amber-900 flex items-center gap-1.5">
+                    <KeyRound className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Redefinir Senha do Assinante (Suporte)</span>
+                  </label>
+                  <span className="text-[10px] text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full font-medium">
+                    Acesso Imediato
+                  </span>
+                </div>
+                <p className="text-[11px] text-amber-800 leading-relaxed">
+                  Defina uma nova senha temporária caso o cliente não consiga acessar ou tenha esquecido a senha.
+                </p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={resetPasswordVal}
+                    onChange={(e) => setResetPasswordVal(e.target.value)}
+                    placeholder="Digite a nova senha (mínimo 6 caracteres)"
+                    className="flex-1 p-2 rounded-xl border border-amber-300 bg-white text-[#111B21] font-mono text-xs focus:outline-none focus:border-amber-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleResetPassword}
+                    disabled={resetPasswordLoading || !resetPasswordVal}
+                    className="px-3 py-2 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 disabled:opacity-50 transition-colors shrink-0 shadow-xs"
+                  >
+                    {resetPasswordLoading ? 'Alterando...' : 'Definir Senha'}
+                  </button>
+                </div>
+                {resetPasswordSuccess && (
+                  <div className="p-2 rounded-lg bg-emerald-100 text-emerald-800 text-[11px] font-semibold flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Senha redefinida com sucesso! Você já pode repassar a nova senha ao cliente.</span>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">

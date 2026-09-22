@@ -580,3 +580,30 @@ export async function fetchAdminInvoices(limit = 20): Promise<Invoice[]> {
     created_at: inv.created_at,
   }));
 }
+
+/**
+ * Super Admin: Reset a subscriber's password via RPC
+ */
+export async function adminResetUserPassword(userId: string, newPassword: string): Promise<boolean> {
+  const supabase = createClient();
+  try {
+    const { data, error } = await supabase.rpc('admin_reset_user_password', {
+      target_user_id: userId,
+      new_password: newPassword,
+    });
+
+    if (error) {
+      console.error('Error resetting password via RPC:', error);
+      return false;
+    }
+
+    await logAdminAction('user.password_reset', 'user', userId, {
+      reset_by_admin: true,
+    });
+
+    return !!data;
+  } catch (err) {
+    console.error('Error in adminResetUserPassword:', err);
+    return false;
+  }
+}
