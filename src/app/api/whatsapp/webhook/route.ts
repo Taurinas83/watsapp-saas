@@ -407,10 +407,7 @@ export async function POST(req: NextRequest) {
         ]);
 
         const org = orgData?.data;
-        const modelPreference: 'claude' | 'gemini' =
-          org?.ai_model_preference === 'claude' || org?.plan_tier === 'pro' || org?.plan_tier === 'enterprise'
-            ? 'claude'
-            : 'gemini';
+        const modelPreference = (org?.ai_model_preference as any) || 'auto';
 
         const attendant = attendantData || initialAttendant;
         const knowledgeItems = knowledgeItemsData && knowledgeItemsData.length > 0

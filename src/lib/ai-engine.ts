@@ -237,12 +237,12 @@ export function searchKnowledgeBase(
 // ─────────────────────────────────────────────────────────────────────────────
 const LLM_TIMEOUT_MS = 9000; // 9 segundos para permitir respostas ricas e naturais
 
-// Lista de modelos Anthropic ordenados por preferência de qualidade conversacional
+// Modelos Anthropic com foco em custo mínimo: Claude 3.5 Haiku como primário
 const CLAUDE_MODELS = [
-  'claude-sonnet-4-6',
-  'claude-haiku-4-5-20251001',
-  'claude-sonnet-4-5-20250929',
+  'claude-3-5-haiku-20241022',
+  'claude-3-haiku-20240307',
   'claude-3-5-sonnet-20241022',
+  'claude-3-7-sonnet-20250219',
 ];
 
 export async function generateClaudeResponse(
@@ -263,7 +263,7 @@ export async function generateClaudeResponse(
       content: m.content,
     }));
 
-    // Tentar modelos suportados com fallback em cascata
+    // Tentar modelos suportados com fallback em cascata (Haiku primeiro para economia máxima)
     for (const model of CLAUDE_MODELS) {
       try {
         const responsePromise = anthropic.messages.create({
@@ -304,17 +304,25 @@ export async function generateClaudeResponse(
 
 export async function generateGeminiResponse(
   systemPrompt: string,
-  userMessage: string
+  userMessage: string,
+  conversationHistory: Message[] = []
 ): Promise<string | null> {
   const geminiApiKey = process.env.GEMINI_API_KEY?.trim();
   if (!geminiApiKey) return null;
 
-  // Lista de modelos Gemini modernos suportados
+  // Lista de modelos Gemini modernos com cota gratuita (1.500 req/dia no Google AI Studio)
   const GEMINI_MODELS = [
     'gemini-2.5-flash',
     'gemini-2.5-flash-lite',
-    'gemini-flash-latest',
+    'gemini-2.0-flash',
+    'gemini-2.0-flash-lite',
+    'gemini-1.5-flash',
   ];
+
+  const recentHistory = conversationHistory.slice(-6).map((m) => ({
+    role: m.sender_type === 'customer' ? 'user' : 'model',
+    parts: [{ text: m.content }],
+  }));
 
   for (const model of GEMINI_MODELS) {
     try {
@@ -324,12 +332,20 @@ export async function generateGeminiResponse(
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            systemInstruction: {
+              parts: [{ text: systemPrompt }],
+            },
             contents: [
+              ...recentHistory,
               {
                 role: 'user',
-                parts: [{ text: `${systemPrompt}\n\nMensagem do Cliente no WhatsApp: ${userMessage}` }],
+                parts: [{ text: userMessage }],
               },
             ],
+            generationConfig: {
+              temperature: 0.6,
+              maxOutputTokens: 450,
+            },
           }),
         }
       );
@@ -339,6 +355,34 @@ export async function generateGeminiResponse(
       );
 
       const res = await Promise.race([fetchPromise, timeoutPromise]);
+      if (!res.ok) {
+        // Fallback simples sem systemInstruction se o endpoint rejeitar
+        try {
+          const fallbackFetch = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [
+                  {
+                    role: 'user',
+                    parts: [{ text: `${systemPrompt}\n\nMensagem do Cliente no WhatsApp: ${userMessage}` }],
+                  },
+                ],
+              }),
+            }
+          );
+          if (fallbackFetch.ok) {
+            const fbData = await fallbackFetch.json();
+            const text = fbData?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+            if (text) return text;
+          }
+        } catch {
+          // Ignora
+        }
+        continue;
+      }
       const data = await res.json();
       const candidateText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
       if (candidateText) {
@@ -353,8 +397,124 @@ export async function generateGeminiResponse(
   return null;
 }
 
+/**
+ * Motor Groq: Llama 3.3 70B Versatile (Cota Gratuita Developer Tier, ultra-rápido ~300 tok/s)
+ */
+export async function generateGroqResponse(
+  systemPrompt: string,
+  userMessage: string,
+  conversationHistory: Message[] = []
+): Promise<string | null> {
+  const groqApiKey = process.env.GROQ_API_KEY?.trim();
+  if (!groqApiKey) return null;
+
+  const GROQ_MODELS = [
+    'llama-3.3-70b-versatile',
+    'llama-3.1-8b-instant',
+  ];
+
+  const recentMessages = conversationHistory.slice(-6).map((m) => ({
+    role: m.sender_type === 'customer' ? ('user' as const) : ('assistant' as const),
+    content: m.content,
+  }));
+
+  for (const model of GROQ_MODELS) {
+    try {
+      const fetchPromise = fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${groqApiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            ...recentMessages,
+            { role: 'user', content: userMessage },
+          ],
+          temperature: 0.6,
+          max_tokens: 450,
+        }),
+      });
+
+      const timeoutPromise = new Promise<Response>((_, reject) =>
+        setTimeout(() => reject(new Error('LLM_TIMEOUT')), LLM_TIMEOUT_MS)
+      );
+
+      const res = await Promise.race([fetchPromise, timeoutPromise]);
+      if (!res.ok) {
+        console.error(`Groq erro HTTP ${res.status} no modelo ${model}`);
+        continue;
+      }
+      const data = await res.json();
+      const content = data?.choices?.[0]?.message?.content?.trim();
+      if (content) return content;
+    } catch (err: any) {
+      console.error(`Tentativa Groq modelo ${model} falhou:`, err.message);
+      continue;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Motor DeepSeek: DeepSeek-V3 (Custo de centavos: $0.14 / 1M tokens, qualidade padrão GPT-4o)
+ */
+export async function generateDeepSeekResponse(
+  systemPrompt: string,
+  userMessage: string,
+  conversationHistory: Message[] = []
+): Promise<string | null> {
+  const deepseekApiKey = process.env.DEEPSEEK_API_KEY?.trim();
+  if (!deepseekApiKey) return null;
+
+  const recentMessages = conversationHistory.slice(-6).map((m) => ({
+    role: m.sender_type === 'customer' ? ('user' as const) : ('assistant' as const),
+    content: m.content,
+  }));
+
+  try {
+    const fetchPromise = fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${deepseekApiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          ...recentMessages,
+          { role: 'user', content: userMessage },
+        ],
+        temperature: 0.6,
+        max_tokens: 450,
+      }),
+    });
+
+    const timeoutPromise = new Promise<Response>((_, reject) =>
+      setTimeout(() => reject(new Error('LLM_TIMEOUT')), LLM_TIMEOUT_MS)
+    );
+
+    const res = await Promise.race([fetchPromise, timeoutPromise]);
+    if (!res.ok) {
+      console.error(`DeepSeek erro HTTP ${res.status}`);
+      return null;
+    }
+    const data = await res.json();
+    const content = data?.choices?.[0]?.message?.content?.trim();
+    if (content) return content;
+  } catch (err: any) {
+    console.error('Tentativa DeepSeek falhou:', err.message);
+  }
+
+  return null;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
-// REGRA 12 & 24: MOTOR PRINCIPAL COM FILTRO DE CONFIANÇA E PERSONALIZAÇÃO
+// REGRA 12 & 24: MOTOR PRINCIPAL COM FILTRO DE CONFIANÇA E CASCATA DE MÍNIMO CUSTO
 // ─────────────────────────────────────────────────────────────────────────────
 export interface BotResponseResult {
   content: string;
@@ -372,7 +532,7 @@ export async function generateBotResponse(
   attendant: Attendant,
   knowledgeItems: KnowledgeItem[],
   conversationHistory: Message[] = [],
-  modelPreference: 'claude' | 'gemini' = 'claude'
+  modelPreference: 'auto' | 'gemini' | 'groq' | 'deepseek' | 'claude_haiku' | 'claude_sonnet' | 'claude' = 'auto'
 ): Promise<BotResponseResult> {
   // 1. Defesa contra Prompt Injection (Regra 10)
   if (detectPromptInjection(userMessage)) {
@@ -404,27 +564,45 @@ export async function generateBotResponse(
   const relevantKnowledge = searchKnowledgeBase(userMessage, knowledgeItems);
   const systemPrompt = buildSystemPrompt(attendant, relevantKnowledge);
 
-  // 4. Chamada de IA com Modelos Modernos (Claude Sonnet 4.6 / Haiku 4.5 / Gemini)
+  // 4. Chamada de IA com Cascata Inteligente de Mínimo Custo (Zero Custo -> Baixo Custo -> Alta Performance)
   let aiContent: string | null = null;
   let modelUsed = 'none';
 
-  if (modelPreference === 'gemini' && process.env.GEMINI_API_KEY) {
-    aiContent = await generateGeminiResponse(systemPrompt, userMessage);
+  // Se houver preferência explícita configurada pelo cliente/organização
+  if (modelPreference === 'groq' && process.env.GROQ_API_KEY) {
+    aiContent = await generateGroqResponse(systemPrompt, userMessage, conversationHistory);
+    if (aiContent) modelUsed = 'groq-llama-3.3-70b';
+  } else if (modelPreference === 'deepseek' && process.env.DEEPSEEK_API_KEY) {
+    aiContent = await generateDeepSeekResponse(systemPrompt, userMessage, conversationHistory);
+    if (aiContent) modelUsed = 'deepseek-v3';
+  } else if ((modelPreference === 'claude_haiku' || modelPreference === 'claude') && process.env.ANTHROPIC_API_KEY) {
+    aiContent = await generateClaudeResponse(systemPrompt, userMessage, conversationHistory);
+    if (aiContent) modelUsed = 'claude-3-5-haiku';
+  }
+
+  // CASCATA DE BAIXO CUSTO (Zero Custo -> Centavos -> Fallback):
+  // 1. Google Gemini 2.5 Flash (1.500 requisições/dia 100% GRÁTIS no Google AI Studio)
+  if (!aiContent && process.env.GEMINI_API_KEY) {
+    aiContent = await generateGeminiResponse(systemPrompt, userMessage, conversationHistory);
     if (aiContent) modelUsed = 'gemini-2.5-flash';
   }
 
-  if (!aiContent && (modelPreference === 'claude' || !process.env.GEMINI_API_KEY)) {
-    aiContent = await generateClaudeResponse(systemPrompt, userMessage, conversationHistory);
-    if (aiContent) modelUsed = 'claude-sonnet-4-6';
+  // 2. Groq Llama 3.3 70B (Tier Desenvolvedor Grátis, ultra-rápido ~300 tok/s)
+  if (!aiContent && process.env.GROQ_API_KEY) {
+    aiContent = await generateGroqResponse(systemPrompt, userMessage, conversationHistory);
+    if (aiContent) modelUsed = 'groq-llama-3.3-70b';
   }
 
-  // Fallback cruzado se o primeiro falhar
-  if (!aiContent && modelPreference === 'claude' && process.env.GEMINI_API_KEY) {
-    aiContent = await generateGeminiResponse(systemPrompt, userMessage);
-    if (aiContent) modelUsed = 'gemini-2.5-flash';
-  } else if (!aiContent && modelPreference === 'gemini' && process.env.ANTHROPIC_API_KEY) {
+  // 3. DeepSeek V3 (Modelo chinês de altíssima qualidade e custo de centavos: $0.14 / 1M tokens)
+  if (!aiContent && process.env.DEEPSEEK_API_KEY) {
+    aiContent = await generateDeepSeekResponse(systemPrompt, userMessage, conversationHistory);
+    if (aiContent) modelUsed = 'deepseek-v3';
+  }
+
+  // 4. Claude 3.5 Haiku (Fallback Anthropic com 75% de economia em relação ao Sonnet)
+  if (!aiContent && process.env.ANTHROPIC_API_KEY) {
     aiContent = await generateClaudeResponse(systemPrompt, userMessage, conversationHistory);
-    if (aiContent) modelUsed = 'claude-sonnet-4-6';
+    if (aiContent) modelUsed = 'claude-3-5-haiku';
   }
 
   // 5. Se o modelo LLM respondeu com sucesso
