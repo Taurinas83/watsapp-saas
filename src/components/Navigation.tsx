@@ -17,7 +17,8 @@ import {
   Sparkles,
   Zap,
   ShieldCheck,
-  CalendarClock
+  CalendarClock,
+  Kanban
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getCurrentUserOrganizationId, fetchMonthlyUsage } from '@/lib/supabase/actions';
@@ -77,6 +78,12 @@ export function Navigation({ userRole = 'admin' }: NavProps) {
       name: 'Supervisão de Conversas',
       href: '/dashboard/supervision',
       icon: Eye
+    },
+    {
+      name: 'Funil CRM & Vendas',
+      href: '/dashboard/crm',
+      icon: Kanban,
+      badge: 'Leads'
     },
     {
       name: 'Mensagens Agendadas',

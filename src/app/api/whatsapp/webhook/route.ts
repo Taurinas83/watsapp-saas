@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { initialAttendant, initialKnowledgeItems } from '@/lib/mock-data';
 import { DEFAULT_ORG_ID } from '@/lib/constants';
 import { Message } from '@/types';
+import { syncCrmLead } from '@/lib/crm/sync';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONFIGURAÇÕES GLOBAIS DE PROTEÇÃO
@@ -513,6 +514,11 @@ export async function POST(req: NextRequest) {
 
         // Salvar resposta da IA no banco
         await insertMessage(conv.id, organizationId, 'bot', attendant.name, aiResult.content);
+
+        // ── SINCRONIZAÇÃO AUTOMÁTICA COM CRM NATIVO (OPORTUNIDADE/LEAD) ────
+        syncCrmLead(supabase, organizationId, conv.id, customerName, customerPhone, aiResult).catch((err) =>
+          console.error('Erro ao sincronizar CRM:', err)
+        );
 
         // ── REGRA 17: TRILHA DE AUDITORIA IMUTÁVEL ──────────────────────────
         const latencyMs = Date.now() - startTime;

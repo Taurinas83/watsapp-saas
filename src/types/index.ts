@@ -114,6 +114,30 @@ export interface ScheduledMessage {
   created_at: string;
 }
 
+export interface CrmStage {
+  id: string;
+  organization_id: string;
+  name: string;
+  color: string;
+  order_index: number;
+  created_at: string;
+}
+
+export interface CrmLead {
+  id: string;
+  organization_id: string;
+  conversation_id?: string;
+  stage_id: string;
+  contact_name: string;
+  contact_phone: string;
+  deal_value: number;
+  ai_summary?: string;
+  tags: string[];
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface AIAuditLog {
   id: string;
   organization_id: string;
