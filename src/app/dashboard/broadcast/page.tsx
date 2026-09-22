@@ -18,6 +18,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { ScheduledMessage } from '@/types';
+import { getCurrentUserOrganizationId } from '@/lib/supabase/actions';
 
 export default function BroadcastPage() {
   const [messages, setMessages] = useState<ScheduledMessage[]>([]);
@@ -53,7 +54,11 @@ export default function BroadcastPage() {
   const loadGroups = async () => {
     setLoadingGroups(true);
     try {
-      const res = await fetch('/api/whatsapp/groups');
+      const orgId = await getCurrentUserOrganizationId();
+      const inst = orgId && orgId !== 'a0000000-0000-0000-0000-000000000001'
+        ? `org_${orgId.replace(/[^a-zA-Z0-9]/g, '_')}`
+        : 'default_org';
+      const res = await fetch(`/api/whatsapp/groups?instance=${inst}`);
       if (res.ok) {
         const data = await res.json();
         setGroups(data.groups || []);

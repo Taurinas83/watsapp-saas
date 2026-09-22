@@ -43,7 +43,9 @@ export async function POST(req: NextRequest) {
         .update({ status: 'processing' })
         .eq('id', item.id);
 
-      const instanceName = 'default_org'; // Instância padrão ou customizada
+      const instanceName = item.organization_id && item.organization_id !== 'a0000000-0000-0000-0000-000000000001'
+        ? `org_${item.organization_id.replace(/[^a-zA-Z0-9]/g, '_')}`
+        : 'default_org';
 
       try {
         // Envio via Evolution API

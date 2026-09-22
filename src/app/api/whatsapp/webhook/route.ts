@@ -191,7 +191,22 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createClient();
-    const organizationId = DEFAULT_ORG_ID;
+    let organizationId = DEFAULT_ORG_ID;
+
+    if (instance && instance !== 'default_org') {
+      if (instance.startsWith('org_')) {
+        const candidateId = instance.replace('org_', '').replace(/_/g, '-');
+        const { data: orgData } = await supabase
+          .from('organizations')
+          .select('id')
+          .eq('id', candidateId)
+          .single();
+
+        if (orgData?.id) {
+          organizationId = orgData.id;
+        }
+      }
+    }
 
     let processedCount = 0;
     let skippedCount = 0;

@@ -3,23 +3,36 @@
 import React, { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { WhatsAppStatus } from '@/types';
+import { getCurrentUserOrganizationId } from '@/lib/supabase/actions';
 import { QrCode, Smartphone, Wifi, WifiOff, RefreshCw, LogOut, CheckCircle2, ShieldCheck, HelpCircle, AlertCircle } from 'lucide-react';
 
 export default function WhatsAppConnectionPage() {
+  const [organizationId, setOrganizationId] = useState<string>('a0000000-0000-0000-0000-000000000001');
   const [status, setStatus] = useState<WhatsAppStatus>('disconnected');
   const [phone, setPhone] = useState<string>('');
   const [profileName, setProfileName] = useState<string>('');
   const [profilePicUrl, setProfilePicUrl] = useState<string | null>(null);
   const [qrCodeImg, setQrCodeImg] = useState<string | null>(null);
   const [pairingCode, setPairingCode] = useState<string | null>(null);
+  const [isPhoneMode, setIsPhoneMode] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const checkStatus = async () => {
+  const getInstanceName = (orgId: string) => {
+    if (!orgId || orgId === 'a0000000-0000-0000-0000-000000000001') {
+      return 'default_org';
+    }
+    return `org_${orgId.replace(/[^a-zA-Z0-9]/g, '_')}`;
+  };
+
+  const currentInstance = getInstanceName(organizationId);
+
+  const checkStatus = async (instName?: string) => {
     try {
       setErrorMessage(null);
-      const res = await fetch('/api/whatsapp/instance');
+      const targetInst = instName || currentInstance;
+      const res = await fetch(`/api/whatsapp/instance?instance=${targetInst}`);
       const data = await res.json();
       if (data.status === 'connected') {
         setStatus('connected');
@@ -41,12 +54,19 @@ export default function WhatsAppConnectionPage() {
   };
 
   useEffect(() => {
-    checkStatus();
+    getCurrentUserOrganizationId().then((orgId) => {
+      if (orgId) {
+        setOrganizationId(orgId);
+        const inst = getInstanceName(orgId);
+        checkStatus(inst);
+      }
+    });
+
     const interval = setInterval(() => {
       checkStatus();
-    }, 3000);
+    }, 4000);
     return () => clearInterval(interval);
-  }, []);
+  }, [organizationId]);
 
   const [phoneInput, setPhoneInput] = useState<string>('');
 
@@ -56,9 +76,10 @@ export default function WhatsAppConnectionPage() {
     setErrorMessage(null);
     setQrCodeImg(null);
     setPairingCode(null);
+    setIsPhoneMode(!!usePhone);
 
     try {
-      const body: any = { action: 'connect' };
+      const body: any = { action: 'connect', instanceName: currentInstance };
       if (usePhone && phoneInput.trim()) {
         body.phone = phoneInput.trim();
       }
@@ -106,7 +127,7 @@ export default function WhatsAppConnectionPage() {
       const res = await fetch('/api/whatsapp/instance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'restart' })
+        body: JSON.stringify({ action: 'restart', instanceName: currentInstance })
       });
       const data = await res.json();
 
@@ -138,7 +159,7 @@ export default function WhatsAppConnectionPage() {
       await fetch('/api/whatsapp/instance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'disconnect' })
+        body: JSON.stringify({ action: 'disconnect', instanceName: currentInstance })
       });
       setStatus('disconnected');
       setPhone('');
@@ -324,10 +345,11 @@ export default function WhatsAppConnectionPage() {
                   <span>Atualizar QR Code</span>
                 </button>
 
-                {pairingCode && (
-                  <div className="pt-2">
-                    <p className="text-[10px] text-slate-400">Código de Conexão alternativo:</p>
-                    <p className="font-mono text-sm font-bold text-slate-800 tracking-wider bg-slate-100 py-1 px-3 rounded-lg inline-block mt-1">{pairingCode}</p>
+                {pairingCode && isPhoneMode && (
+                  <div className="pt-3 border-t border-slate-100">
+                    <p className="text-xs font-bold text-slate-800">Código de Pareamento de 8 Dígitos:</p>
+                    <p className="font-mono text-lg font-extrabold text-[#128C7E] tracking-widest bg-emerald-50 border border-emerald-200 py-2 px-4 rounded-xl inline-block mt-1">{pairingCode}</p>
+                    <p className="text-[11px] text-slate-500 mt-1">Digite este código na notificação do WhatsApp no seu celular.</p>
                   </div>
                 )}
               </div>
