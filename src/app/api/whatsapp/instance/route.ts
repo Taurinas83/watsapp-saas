@@ -77,9 +77,6 @@ export async function GET(req: NextRequest) {
        (typeof inst.disconnectionObject === 'string' && inst.disconnectionObject.includes('device_removed')));
 
     if (inst.connectionStatus === 'open' && !isConflict) {
-      // Ensure webhook is configured (fire and forget)
-      ensureWebhookConfigured(instanceName, req).catch(() => null);
-
       const rawNumber = inst.ownerJid ? inst.ownerJid.split('@')[0] : '';
       let formattedPhone = rawNumber ? `+${rawNumber}` : 'WhatsApp Conectado';
 
