@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   Smartphone,
   LogOut,
   User,
   ChevronDown,
-  Bell
+  Bell,
+  HelpCircle
 } from 'lucide-react';
 import { getCurrentUserOrganizationId, fetchAttendant, toggleBotPause } from '@/lib/supabase/actions';
 import { createClient } from '@/lib/supabase/client';
@@ -106,6 +108,16 @@ export function Header({ title, subtitle }: HeaderProps) {
             <Smartphone className="w-3.5 h-3.5" />
             <span>WhatsApp Online</span>
           </div>
+
+          {/* Quick Help / FAQ Button */}
+          <Link
+            href="/dashboard/help"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors border border-slate-200 shadow-xs"
+            title="Central de Ajuda & Tutoriais"
+          >
+            <HelpCircle className="w-3.5 h-3.5 text-[#128C7E]" />
+            <span>Ajuda / FAQ</span>
+          </Link>
 
           {/* Notifications */}
           <button className="p-2 rounded-xl hover:bg-[#F4F5F4] transition-colors relative">

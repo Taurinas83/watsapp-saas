@@ -18,7 +18,8 @@ import {
   Zap,
   ShieldCheck,
   CalendarClock,
-  Kanban
+  Kanban,
+  HelpCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getCurrentUserOrganizationId, fetchMonthlyUsage } from '@/lib/supabase/actions';
@@ -100,6 +101,12 @@ export function Navigation({ userRole = 'admin' }: NavProps) {
       name: 'Configurações Gerais',
       href: '/dashboard/settings',
       icon: Settings
+    },
+    {
+      name: 'Ajuda & Tutoriais',
+      href: '/dashboard/help',
+      icon: HelpCircle,
+      badge: 'FAQ'
     },
   ];
 
