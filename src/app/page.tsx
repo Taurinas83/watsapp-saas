@@ -25,16 +25,34 @@ import {
   Cpu,
   Layers,
   Sliders,
-  Play
+  Play,
+  Kanban,
+  Calendar,
+  CalendarClock,
+  Send,
+  HelpCircle,
+  DollarSign
 } from 'lucide-react';
 import { WhatsAppSimulatorModal } from '@/components/WhatsAppSimulatorModal';
 
 export default function LandingPage() {
   const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
-  const [activeTab, setActiveTab] = useState<'attendant' | 'knowledge' | 'inbox' | 'whatsapp'>('attendant');
+  const [activeTab, setActiveTab] = useState<'crm' | 'broadcast' | 'attendant' | 'knowledge' | 'inbox' | 'whatsapp'>('crm');
 
   const faqs = [
+    {
+      q: 'A Zapella consegue agendar reuniões e consultas para mim?',
+      a: 'Sim! A Zapella integra-se com Calendly, Cal.com ou Google Calendar. Quando o cliente demonstra interesse em marcar um horário ou consulta, a IA identifica a intenção e envia o seu link de agendamento na hora exata, sem você precisar intervir.'
+    },
+    {
+      q: 'Como funciona o CRM integrado dentro da Zapella?',
+      a: 'Todo cliente que conversa no seu WhatsApp é automaticamente cadastrado como lead no seu Funil de Vendas (Kanban). Você visualiza em qual etapa da negociação ele está, o valor estimado do negócio e tem acesso direto ao chat com 1 clique.'
+    },
+    {
+      q: 'Posso mandar mensagens para grupos de WhatsApp sem risco de banimento?',
+      a: 'Sim! Nosso Agendador de Mensagens para Grupos VIP conta com proteção antiban inteligente (intervalo humanizado de 15 a 30 segundos entre envios) e opera com custo zero de tokens de IA, perfeito para lançamentos e comunidades.'
+    },
     {
       q: 'Preciso ter o celular ligado o tempo todo para a Zapella funcionar?',
       a: 'Não! Graças à integração via WhatsApp Business API (Evolution API), a Zapella opera 100% na nuvem, 24 horas por dia, 7 dias por semana, mesmo que seu celular esteja desligado ou sem bateria.'
@@ -48,8 +66,8 @@ export default function LandingPage() {
       a: 'A Zapella possui gatilhos inteligentes de Handover. Se o cliente pedir para falar com um atendente ou demonstrar insatisfação, a IA pausa a resposta automática e transfere a conversa imediatamente para a Caixa de Entrada da sua equipe.'
     },
     {
-      q: 'Posso personalizar o tom de voz para parecer com a minha marca?',
-      a: 'Com certeza! Você pode escolher personalidades pré-definidas (Amigável, Profissional ou Descontraído) e definir instruções de conduta sob medida para sua clínica, loja ou escritório.'
+      q: 'Quais modelos de Inteligência Artificial a Zapella utiliza?',
+      a: 'Trabalhamos com um motor híbrido de ponta: Google Gemini 2.5 Flash, Groq (Llama 3.3 70B), DeepSeek V3 e Claude 3.5 Haiku, combinando ultra-velocidade com respostas humanizadas e precisas.'
     }
   ];
 
@@ -99,7 +117,7 @@ export default function LandingPage() {
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold mb-8"
              style={{ background: 'rgba(0,230,118,0.08)', borderColor: 'rgba(0,230,118,0.30)', color: '#2E7D5A' }}>
           <Sparkles className="w-3.5 h-3.5" />
-          <span>Atendimento Inteligente 24/7 via WhatsApp</span>
+          <span>Atendimento Inteligente 24/7 • CRM Nativo • Agendas • Disparos em Grupos</span>
         </div>
 
         <h1 className="text-4xl sm:text-6xl font-extrabold text-[#171901] tracking-tight max-w-4xl mx-auto leading-[1.12]">
@@ -111,7 +129,7 @@ export default function LandingPage() {
         </h1>
 
         <p className="mt-6 text-base sm:text-lg text-[#4D4D61] max-w-2xl mx-auto leading-relaxed">
-          Atenda clientes instantaneamente, tire dúvidas com base no seu catálogo e transfira para sua equipe apenas quando necessário. Sem complicações técnicas.
+          Atenda clientes instantaneamente, gerencie seu Funil CRM de Vendas, agende reuniões automaticamente e dispare mensagens para seus grupos VIP com total segurança.
         </p>
 
         <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -136,10 +154,10 @@ export default function LandingPage() {
         {/* Feature Pills */}
         <div className="mt-14 pt-10 border-t border-[#E0E3E1] grid grid-cols-2 md:grid-cols-4 gap-6 text-[#4D4D61] text-xs font-medium max-w-4xl mx-auto">
           {[
-            'Respostas em < 5 segundos',
-            'Treinamento com seus dados',
-            'Handover para humano',
-            'Sem taxas de instalação'
+            'Respostas em < 3 segundos',
+            'Funil CRM Nativo (Kanban)',
+            'Agendamento de Calls com IA',
+            'Disparo Seguro em Grupos VIP'
           ].map((feat) => (
             <div key={feat} className="flex items-center justify-center gap-2">
               <CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: '#00E676' }} />
@@ -155,7 +173,7 @@ export default function LandingPage() {
           {[
             { val: '+2.400', label: 'Empresas ativas' },
             { val: '98.2%', label: 'Precisão das respostas' },
-            { val: '< 5s', label: 'Tempo de resposta' },
+            { val: '< 3s', label: 'Tempo de resposta' },
             { val: '24/7', label: 'Sem pausas' }
           ].map((stat) => (
             <div key={stat.label}>
@@ -180,31 +198,31 @@ export default function LandingPage() {
               <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(0,230,118,0.10)' }}>
                 <Clock className="w-6 h-6" style={{ color: '#2E7D5A' }} />
               </div>
-              <h3 className="text-base font-bold text-[#171901]">Atendimento 24/7 sem Pausa</h3>
+              <h3 className="text-base font-bold text-[#171901]">Atendimento IA 24/7 sem Pausa</h3>
               <p className="text-xs text-[#4D4D61] leading-relaxed">
-                Nunca mais perca vendas no período da noite ou aos finais de semana. A Zapella responde imediatamente a qualquer hora.
+                Nunca mais perca vendas no período da noite ou aos finais de semana. A Zapella responde imediatamente a qualquer hora com inteligência multi-modelo.
               </p>
             </div>
 
             {/* Benefit Card 2 */}
             <div className="p-8 rounded-3xl border border-[#E0E3E1] space-y-4 hover:border-[#7C4DFF]/40 hover:shadow-lg transition-all bg-white">
               <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(124,77,255,0.08)' }}>
-                <Bot className="w-6 h-6" style={{ color: '#7C4DFF' }} />
+                <Kanban className="w-6 h-6" style={{ color: '#7C4DFF' }} />
               </div>
-              <h3 className="text-base font-bold text-[#171901]">Personalidade Humanizada</h3>
+              <h3 className="text-base font-bold text-[#171901]">Funil CRM de Vendas Integrado</h3>
               <p className="text-xs text-[#4D4D61] leading-relaxed">
-                Diga adeus a bots engessados. A Zapella cria conversas fluidas e naturais com o tom de voz da sua marca.
+                Cada contato do WhatsApp é registrado como lead em um Kanban visual. Acompanhe etapas, valores previstos e acerte o timing das vendas.
               </p>
             </div>
 
             {/* Benefit Card 3 */}
             <div className="p-8 rounded-3xl border border-[#E0E3E1] space-y-4 hover:border-[#1DE9B6]/40 hover:shadow-lg transition-all bg-white">
               <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(29,233,182,0.10)' }}>
-                <Headphones className="w-6 h-6" style={{ color: '#00897B' }} />
+                <CalendarClock className="w-6 h-6" style={{ color: '#00897B' }} />
               </div>
-              <h3 className="text-base font-bold text-[#171901]">Supervisão & Intervenção Humana</h3>
+              <h3 className="text-base font-bold text-[#171901]">Agendas & Grupos VIP</h3>
               <p className="text-xs text-[#4D4D61] leading-relaxed">
-                Sua equipe tem controle total para assumir conversas sensíveis com 1 clique diretamente pelo painel.
+                Agende reuniões e consultas direto pelo Calendly/Google Calendar e dispare comunicados para grupos com proteção antiban inteligente.
               </p>
             </div>
           </div>
@@ -222,74 +240,96 @@ export default function LandingPage() {
               O que torna a Zapella superior a chatbots comuns?
             </h2>
             <p className="text-xs text-[#4D4D61] mt-3">
-              Construída para empresas que precisam de atendimento sério, preciso e sem respostas inventadas.
+              Construída para empresas que precisam de atendimento sério, vendas estruturadas e sem respostas inventadas.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Diff 1: RAG Sem Alucinações */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Diff 1: Funil CRM Nativo */}
+            <div className="p-7 rounded-3xl bg-white border border-[#E0E3E1] space-y-3 hover:border-[#00E676] transition-all shadow-xs">
+              <div className="w-10 h-10 rounded-xl bg-purple-50 text-[#7C4DFF] flex items-center justify-center">
+                <Kanban className="w-5 h-5" strokeWidth={1.75} />
+              </div>
+              <h3 className="text-sm font-bold text-[#171901]">Funil CRM Nativo</h3>
+              <p className="text-xs text-[#4D4D61] leading-relaxed">
+                Todos os contatos que chegam pelo WhatsApp entram automaticamente no seu CRM visual Kanban com valores e etapas.
+              </p>
+            </div>
+
+            {/* Diff 2: Agendamento Inteligente */}
+            <div className="p-7 rounded-3xl bg-white border border-[#E0E3E1] space-y-3 hover:border-[#00E676] transition-all shadow-xs">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-[#128C7E] flex items-center justify-center">
+                <Calendar className="w-5 h-5" strokeWidth={1.75} />
+              </div>
+              <h3 className="text-sm font-bold text-[#171901]">Agendamento de Calls</h3>
+              <p className="text-xs text-[#4D4D61] leading-relaxed">
+                A IA detecta pedidos de consulta ou reunião e envia o link direto do seu Calendly, Cal.com ou Google Agenda.
+              </p>
+            </div>
+
+            {/* Diff 3: Disparo Seguro em Grupos */}
+            <div className="p-7 rounded-3xl bg-white border border-[#E0E3E1] space-y-3 hover:border-[#00E676] transition-all shadow-xs">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                <CalendarClock className="w-5 h-5" strokeWidth={1.75} />
+              </div>
+              <h3 className="text-sm font-bold text-[#171901]">Disparos em Grupos VIP</h3>
+              <p className="text-xs text-[#4D4D61] leading-relaxed">
+                Agende mensagens para grupos com proteção antiban inteligente (intervalo de 15 a 30s) e custo zero de IA.
+              </p>
+            </div>
+
+            {/* Diff 4: RAG Sem Alucinações */}
             <div className="p-7 rounded-3xl bg-white border border-[#E0E3E1] space-y-3 hover:border-[#00E676] transition-all shadow-xs">
               <div className="w-10 h-10 rounded-xl bg-emerald-50 text-[#128C7E] flex items-center justify-center">
                 <BookOpen className="w-5 h-5" strokeWidth={1.75} />
               </div>
               <h3 className="text-sm font-bold text-[#171901]">RAG Sem Alucinações</h3>
               <p className="text-xs text-[#4D4D61] leading-relaxed">
-                A IA responde estritamente o que você ensinou na Base de Conhecimento. Nunca inventa preços, prazos ou promoções inexistentes.
+                A IA responde estritamente o que você ensinou na Base de Conhecimento. Nunca inventa preços ou prazos.
               </p>
             </div>
 
-            {/* Diff 2: Transferência Imediata */}
+            {/* Diff 5: Motor Multi-LLM */}
+            <div className="p-7 rounded-3xl bg-white border border-[#E0E3E1] space-y-3 hover:border-[#00E676] transition-all shadow-xs">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                <Cpu className="w-5 h-5" strokeWidth={1.75} />
+              </div>
+              <h3 className="text-sm font-bold text-[#171901]">Motor Multi-LLM</h3>
+              <p className="text-xs text-[#4D4D61] leading-relaxed">
+                Potência de Google Gemini 2.5 Flash, Groq (Llama 3.3), DeepSeek V3 e Claude 3.5 para respostas em menos de 3s.
+              </p>
+            </div>
+
+            {/* Diff 6: Handover Inteligente */}
             <div className="p-7 rounded-3xl bg-white border border-[#E0E3E1] space-y-3 hover:border-[#00E676] transition-all shadow-xs">
               <div className="w-10 h-10 rounded-xl bg-emerald-50 text-[#128C7E] flex items-center justify-center">
                 <UserCheck className="w-5 h-5" strokeWidth={1.75} />
               </div>
               <h3 className="text-sm font-bold text-[#171901]">Handover Inteligente</h3>
               <p className="text-xs text-[#4D4D61] leading-relaxed">
-                Configure palavras-chave como "cancelar", "humano" ou "urgente". O bot pausa instantaneamente e transfere para sua equipe.
+                Palavras-chave como "cancelar" ou "urgente" pausam o bot na hora e transferem para o operador humano.
               </p>
             </div>
 
-            {/* Diff 3: Modo Copiloto */}
+            {/* Diff 7: Modo Copiloto */}
             <div className="p-7 rounded-3xl bg-white border border-[#E0E3E1] space-y-3 hover:border-[#00E676] transition-all shadow-xs">
               <div className="w-10 h-10 rounded-xl bg-purple-50 text-[#7C4DFF] flex items-center justify-center">
                 <Sparkles className="w-5 h-5" strokeWidth={1.75} />
               </div>
-              <h3 className="text-sm font-bold text-[#171901]">Modo Copiloto para a Equipe</h3>
+              <h3 className="text-sm font-bold text-[#171901]">Modo Copiloto</h3>
               <p className="text-xs text-[#4D4D61] leading-relaxed">
-                A IA redige sugestões de respostas perfeitas dentro da Inbox. Seu atendente humano apenas revisa e envia com 1 clique.
+                A IA sugere respostas prontas na Inbox da sua equipe para o atendente revisar e enviar com 1 clique.
               </p>
             </div>
 
-            {/* Diff 4: Conexão QR Code */}
+            {/* Diff 8: Nuvem 24/7 & QR Code */}
             <div className="p-7 rounded-3xl bg-white border border-[#E0E3E1] space-y-3 hover:border-[#00E676] transition-all shadow-xs">
               <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
                 <QrCode className="w-5 h-5" strokeWidth={1.75} />
               </div>
-              <h3 className="text-sm font-bold text-[#171901]">Conexão QR Code em 30s</h3>
+              <h3 className="text-sm font-bold text-[#171901]">Nuvem 24/7 & QR Code</h3>
               <p className="text-xs text-[#4D4D61] leading-relaxed">
-                Zero burocracia de validação no Facebook Meta. Conecte qualquer WhatsApp comercial existente como se fosse o WhatsApp Web.
-              </p>
-            </div>
-
-            {/* Diff 5: Supervisão em Tempo Real */}
-            <div className="p-7 rounded-3xl bg-white border border-[#E0E3E1] space-y-3 hover:border-[#00E676] transition-all shadow-xs">
-              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                <Eye className="w-5 h-5" strokeWidth={1.75} />
-              </div>
-              <h3 className="text-sm font-bold text-[#171901]">Supervisão & Auditoria</h3>
-              <p className="text-xs text-[#4D4D61] leading-relaxed">
-                Acompanhe o grau de confiança de cada resposta da IA, métricas de tempo de resposta e assuma conversas a qualquer momento.
-              </p>
-            </div>
-
-            {/* Diff 6: 100% em Nuvem 24/7 */}
-            <div className="p-7 rounded-3xl bg-white border border-[#E0E3E1] space-y-3 hover:border-[#00E676] transition-all shadow-xs">
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-[#128C7E] flex items-center justify-center">
-                <Cpu className="w-5 h-5" strokeWidth={1.75} />
-              </div>
-              <h3 className="text-sm font-bold text-[#171901]">100% em Nuvem 24/7</h3>
-              <p className="text-xs text-[#4D4D61] leading-relaxed">
-                Seu celular ficou sem bateria ou sem sinal? A Zapella continua respondendo sem parar nos servidores de alta disponibilidade.
+                Conecte em 30 segundos pelo QR Code. Funciona direto na nuvem mesmo com seu celular desligado.
               </p>
             </div>
           </div>
@@ -338,7 +378,9 @@ export default function LandingPage() {
           {/* Tabs Selector */}
           <div className="flex flex-wrap items-center justify-center gap-2">
             {[
-              { id: 'attendant', label: 'Identidade do Atendente', icon: Bot },
+              { id: 'crm', label: 'Funil CRM (Kanban)', icon: Kanban },
+              { id: 'broadcast', label: 'Disparo em Grupos VIP', icon: CalendarClock },
+              { id: 'attendant', label: 'Identidade & Agendas', icon: Bot },
               { id: 'knowledge', label: 'Base de Conhecimento (RAG)', icon: BookOpen },
               { id: 'inbox', label: 'Inbox & Supervisão ao Vivo', icon: MessageSquare },
               { id: 'whatsapp', label: 'Conexão WhatsApp', icon: QrCode },
@@ -381,12 +423,204 @@ export default function LandingPage() {
 
             {/* Mockup Screen Contents */}
             <div className="bg-[#F0F2F5] rounded-2xl p-6 text-[#111B21] min-h-[420px]">
+              {activeTab === 'crm' && (
+                <div className="space-y-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-sm font-bold text-[#111B21]">Funil CRM de Vendas</h4>
+                        <span className="px-2.5 py-0.5 rounded-full bg-purple-100 text-[#7C4DFF] text-[10px] font-extrabold uppercase">
+                          Sincronizado com WhatsApp
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#667781]">Arraste seus contatos pelas etapas e monitore o valor total em negociação</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-[#111B21] shadow-xs">
+                        Total no Funil: <span className="text-[#128C7E]">R$ 12.300,00</span>
+                      </div>
+                      <span className="px-3 py-1.5 rounded-xl bg-[#128C7E] text-white text-xs font-bold shadow-xs">
+                        + Novo Lead
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Kanban Columns */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    {/* Column 1: Novo Lead */}
+                    <div className="bg-slate-100/80 rounded-xl p-3 space-y-2 border border-slate-200">
+                      <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-blue-500" />
+                          Novo Lead (2)
+                        </span>
+                        <span className="text-[10px] text-slate-400">R$ 2.350</span>
+                      </div>
+
+                      <div className="bg-white p-3 rounded-lg border border-slate-200 space-y-2 shadow-xs hover:border-slate-300 transition-all">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-xs text-[#111B21]">Mariana Santos</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-semibold">WhatsApp</span>
+                        </div>
+                        <p className="text-[11px] text-[#667781] line-clamp-1">Interesse em consulta dermatológica</p>
+                        <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[11px]">
+                          <span className="font-bold text-[#128C7E]">R$ 1.500,00</span>
+                          <span className="text-[10px] text-slate-400">14:32</span>
+                        </div>
+                      </div>
+
+                      <div className="bg-white p-3 rounded-lg border border-slate-200 space-y-2 shadow-xs hover:border-slate-300 transition-all">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-xs text-[#111B21]">Rodrigo Alves</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-semibold">WhatsApp</span>
+                        </div>
+                        <p className="text-[11px] text-[#667781] line-clamp-1">Pediu tabela de preços trimestral</p>
+                        <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[11px]">
+                          <span className="font-bold text-[#128C7E]">R$ 850,00</span>
+                          <span className="text-[10px] text-slate-400">13:10</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Column 2: Em Qualificação */}
+                    <div className="bg-slate-100/80 rounded-xl p-3 space-y-2 border border-slate-200">
+                      <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-amber-500" />
+                          Qualificação (1)
+                        </span>
+                        <span className="text-[10px] text-slate-400">R$ 2.400</span>
+                      </div>
+
+                      <div className="bg-white p-3 rounded-lg border border-slate-200 space-y-2 shadow-xs hover:border-slate-300 transition-all">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-xs text-[#111B21]">Camila Albuquerque</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 font-semibold">Proposta</span>
+                        </div>
+                        <p className="text-[11px] text-[#667781] line-clamp-1">Aguardando aprovação da proposta</p>
+                        <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[11px]">
+                          <span className="font-bold text-[#128C7E]">R$ 2.400,00</span>
+                          <span className="text-[10px] text-slate-400">Ontem</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Column 3: Reunião / Agendado */}
+                    <div className="bg-slate-100/80 rounded-xl p-3 space-y-2 border border-slate-200">
+                      <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                          Agendados (1)
+                        </span>
+                        <span className="text-[10px] text-slate-400">R$ 3.500</span>
+                      </div>
+
+                      <div className="bg-white p-3 rounded-lg border border-emerald-200 space-y-2 shadow-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-xs text-[#111B21]">Dr. Lucas Lima</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-[#128C7E] font-semibold">Google Meet</span>
+                        </div>
+                        <p className="text-[11px] text-[#667781] line-clamp-1">Call via Calendly agendada pela IA</p>
+                        <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[11px]">
+                          <span className="font-bold text-[#128C7E]">R$ 3.500,00</span>
+                          <span className="text-[10px] text-[#128C7E] font-semibold">Amanhã 15h</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Column 4: Fechado / Ganho */}
+                    <div className="bg-slate-100/80 rounded-xl p-3 space-y-2 border border-slate-200">
+                      <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-[#128C7E]" />
+                          Ganho (1)
+                        </span>
+                        <span className="text-[10px] text-slate-400">R$ 4.900</span>
+                      </div>
+
+                      <div className="bg-white p-3 rounded-lg border border-emerald-200 space-y-2 shadow-xs bg-emerald-50/20">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-xs text-[#111B21]">Beatriz Costa</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-[#128C7E] font-extrabold">Fechado</span>
+                        </div>
+                        <p className="text-[11px] text-[#667781] line-clamp-1">Contrato anual assinado via WhatsApp</p>
+                        <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[11px]">
+                          <span className="font-bold text-[#128C7E]">R$ 4.900,00</span>
+                          <span className="text-[10px] text-emerald-600 font-bold">Pago Pix</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'broadcast' && (
+                <div className="space-y-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-sm font-bold text-[#111B21]">Disparo para Grupos de WhatsApp</h4>
+                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-[#128C7E] text-[10px] font-extrabold uppercase">
+                          Proteção Antiban Ativa
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#667781]">Agende comunicados e ofertas para seus grupos VIP com intervalo seguro de 15 a 30s</p>
+                    </div>
+                    <span className="px-3 py-1.5 rounded-xl bg-[#128C7E] text-white text-xs font-bold shadow-xs">
+                      + Agendar Nova Mensagem
+                    </span>
+                  </div>
+
+                  {/* Summary metric pills */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200">
+                      <p className="text-[10px] text-slate-400 font-medium">Grupos Conectados</p>
+                      <p className="text-lg font-bold text-[#111B21] mt-0.5">4 Grupos VIP</p>
+                    </div>
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200">
+                      <p className="text-[10px] text-slate-400 font-medium">Mensagens Agendadas</p>
+                      <p className="text-lg font-bold text-blue-600 mt-0.5">1 Envio Pendente</p>
+                    </div>
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200">
+                      <p className="text-[10px] text-slate-400 font-medium">Intervalo Antiban</p>
+                      <p className="text-lg font-bold text-[#128C7E] mt-0.5">15s a 30s Jitter</p>
+                    </div>
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200">
+                      <p className="text-[10px] text-slate-400 font-medium">Custo de Disparo</p>
+                      <p className="text-lg font-bold text-[#128C7E] mt-0.5">R$ 0,00 (Sem Tokens)</p>
+                    </div>
+                  </div>
+
+                  {/* Scheduled Message Item */}
+                  <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3 shadow-xs">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                      <div>
+                        <span className="font-bold text-xs text-[#111B21]">Campanha: Lembrete da Masterclass Exclusiva</span>
+                        <p className="text-[11px] text-slate-500">Destino: <span className="font-semibold text-slate-700">Comunidade de Clientes VIP (184 membros)</span></p>
+                      </div>
+                      <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold self-start sm:self-auto">
+                        Agendado para Hoje às 19:30
+                      </span>
+                    </div>
+
+                    <div className="p-3 bg-slate-50 rounded-lg text-xs font-mono text-slate-700 border border-slate-200">
+                      "Boa noite pessoal! Passando para avisar que em 30 minutos liberamos a gravação completa e o material complementar no grupo. Fiquem ligados!"
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
+                      <span>✓ Disparo automático via Evolution API</span>
+                      <span className="text-emerald-600 font-semibold">Segurança Antiban: Fila escalonada</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {activeTab === 'attendant' && (
                 <div className="space-y-6">
                   <div className="flex items-center justify-between border-b border-slate-200 pb-4">
                     <div>
-                      <h4 className="text-sm font-bold text-[#111B21]">Identidade do Atendente Virtual</h4>
-                      <p className="text-xs text-[#667781]">Configure o tom de voz e regras de conduta da Zapella</p>
+                      <h4 className="text-sm font-bold text-[#111B21]">Identidade do Atendente & Agendas</h4>
+                      <p className="text-xs text-[#667781]">Configure o tom de voz, link do Calendly/Google Calendar e regras de conduta</p>
                     </div>
                     <span className="px-3 py-1 rounded-full bg-emerald-100 text-[#128C7E] text-xs font-bold">
                       ● Atendente Ativo
@@ -413,15 +647,36 @@ export default function LandingPage() {
                     </div>
 
                     <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
+                      <label className="font-bold text-[#111B21] block">Link de Agendamento (Calendly / Google)</label>
+                      <div className="p-2.5 bg-slate-50 rounded-lg font-mono text-[11px] text-slate-700 border border-slate-200 truncate">
+                        https://calendly.com/sua-clinica/consulta-30min
+                      </div>
+                      <p className="text-[11px] text-[#667781]">
+                        A IA envia esse link automaticamente sempre que o lead pedir uma reunião ou consulta.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                    <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
                       <label className="font-bold text-[#111B21] block">Palavras-chave de Transferência Imediata</label>
                       <div className="flex flex-wrap gap-1.5">
                         <span className="bg-slate-100 px-2 py-1 rounded-md text-[11px] font-semibold text-slate-700">falar com atendente</span>
                         <span className="bg-slate-100 px-2 py-1 rounded-md text-[11px] font-semibold text-slate-700">cancelar</span>
-                        <span className="bg-slate-100 px-2 py-1 rounded-md text-[11px] font-semibold text-slate-700">doutor</span>
                         <span className="bg-slate-100 px-2 py-1 rounded-md text-[11px] font-semibold text-slate-700">urgente</span>
                       </div>
                       <p className="text-[11px] text-[#667781]">
                         Ao detectar esses termos, a IA pausa na hora e notifica sua equipe.
+                      </p>
+                    </div>
+
+                    <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
+                      <label className="font-bold text-[#111B21] block">Link do Grupo VIP (WhatsApp)</label>
+                      <div className="p-2.5 bg-slate-50 rounded-lg font-mono text-[11px] text-slate-700 border border-slate-200 truncate">
+                        https://chat.whatsapp.com/GrupoClientesVIP2026
+                      </div>
+                      <p className="text-[11px] text-[#667781]">
+                        A IA convida novos leads para sua comunidade após o primeiro atendimento.
                       </p>
                     </div>
                   </div>
@@ -429,7 +684,7 @@ export default function LandingPage() {
                   <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-2 text-xs">
                     <label className="font-bold text-[#111B21] block">Instruções Customizadas da Empresa</label>
                     <div className="p-3 bg-slate-50 rounded-lg font-mono text-[11px] text-slate-700 border border-slate-200">
-                      "Você é a Zapella, secretária da Clínica Saúde Total. Nosso horário é de seg a sex das 08h às 19h. Sempre confirme o nome do paciente antes de agendar qualquer consulta."
+                      "Você é a Zapella, secretária da Clínica Saúde Total. Nosso horário é de seg a sex das 08h às 19h. Sempre confirme o nome do paciente antes de enviar o link da agenda."
                     </div>
                   </div>
                 </div>
@@ -600,7 +855,14 @@ export default function LandingPage() {
                   <span className="text-xs text-[#4D4D61]"> /mês</span>
                 </div>
                 <ul className="mt-6 space-y-3 text-xs text-[#4D4D61]">
-                  {['Até 1.000 mensagens/mês', '1 Número de WhatsApp', 'Base de Conhecimento RAG', 'Painel de Inbox para 1 operador'].map(f => (
+                  {[
+                    'Até 1.000 mensagens/mês',
+                    '1 Número de WhatsApp Conectado',
+                    'Base de Conhecimento RAG',
+                    'Funil CRM Nativo (Kanban)',
+                    'Agendamento de Calls com IA',
+                    'Painel de Inbox para 1 operador'
+                  ].map(f => (
                     <li key={f} className="flex items-center gap-2">
                       <Check className="w-4 h-4 shrink-0" style={{ color: '#00E676' }} />
                       {f}
@@ -633,7 +895,15 @@ export default function LandingPage() {
                   <span className="text-xs text-[#4D4D61]"> /mês</span>
                 </div>
                 <ul className="mt-6 space-y-3 text-xs text-[#4D4D61]">
-                  {['Mensagens ilimitadas', '1 Número de WhatsApp', 'Sugestões de Resposta IA', 'Até 5 operadores no Inbox', 'Relatórios de métricas avançados'].map(f => (
+                  {[
+                    'Mensagens ilimitadas',
+                    '1 Número de WhatsApp Conectado',
+                    'Funil CRM Completo com Múltiplas Etapas',
+                    'Disparo em Grupos VIP com Antiban',
+                    'Agendamento com Calendly & Google',
+                    'Sugestões de Resposta IA (Copiloto)',
+                    'Até 5 operadores no Inbox'
+                  ].map(f => (
                     <li key={f} className="flex items-center gap-2">
                       <Check className="w-4 h-4 shrink-0" style={{ color: '#00E676' }} />
                       {f}
@@ -662,7 +932,14 @@ export default function LandingPage() {
                   <span className="text-xs text-[#4D4D61]"> /mês</span>
                 </div>
                 <ul className="mt-6 space-y-3 text-xs text-[#4D4D61]">
-                  {['Múltiplos números WhatsApp', 'Operadores ilimitados', 'Suporte dedicado via WhatsApp', 'Treinamento de IA sob medida'].map(f => (
+                  {[
+                    'Múltiplos números WhatsApp',
+                    'Operadores ilimitados',
+                    'CRM Avançado & Campos Personalizados',
+                    'Disparo em Massa para Grupos Ilimitados',
+                    'Suporte prioritário via WhatsApp',
+                    'Treinamento de IA sob medida'
+                  ].map(f => (
                     <li key={f} className="flex items-center gap-2">
                       <Check className="w-4 h-4 shrink-0" style={{ color: '#00E676' }} />
                       {f}
