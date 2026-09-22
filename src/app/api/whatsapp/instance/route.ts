@@ -123,8 +123,20 @@ export async function POST(req: NextRequest) {
         pairingCode = connectData?.pairingCode || connectData?.qrcode?.pairingCode || null;
       }
 
-      // 2. If no QR code, create instance first
-      if (!qrCodeBase64) {
+      // 2. If no QR code and no pairing code, the instance is either in a zombie state or doesn't exist.
+      // Clean up stale instance and recreate cleanly.
+      if (!qrCodeBase64 && !pairingCode) {
+        console.warn(`[WhatsApp] Instance ${instanceName} did not return QR code on connect. Forcing clean recreation...`);
+
+        // Purge old zombie instance
+        await evoFetch(`/instance/logout/${instanceName}`, { method: 'DELETE' });
+        await evoFetch(`/instance/delete/${instanceName}`, { method: 'DELETE' });
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        const host = req.headers.get('host') || 'www.zapella.app';
+        const protocol = host.includes('localhost') ? 'http' : 'https';
+        const webhookUrl = `${protocol}://${host}/api/whatsapp/webhook`;
+
         const createRes = await evoFetch('/instance/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -133,7 +145,7 @@ export async function POST(req: NextRequest) {
             qrcode: true,
             integration: 'WHATSAPP-BAILEYS',
             webhook: {
-              url: `https://${req.headers.get('host') || 'watsapp-saas.vercel.app'}/api/whatsapp/webhook`,
+              url: webhookUrl,
               byEvents: false,
               base64: false,
               events: ['MESSAGES_SET', 'MESSAGES_UPSERT', 'MESSAGES_UPDATE', 'SEND_MESSAGE', 'CONNECTION_UPDATE']
@@ -148,8 +160,8 @@ export async function POST(req: NextRequest) {
         }
 
         // 3. If still no QR, try connect after create
-        if (!qrCodeBase64) {
-          const retryRes = await evoFetch(`/instance/connect/${instanceName}`);
+        if (!qrCodeBase64 && !pairingCode) {
+          const retryRes = await evoFetch(connectUrl);
           if (retryRes) {
             const retryData = await retryRes.json().catch(() => null);
             qrCodeBase64 = retryData?.base64 || retryData?.qrcode?.base64 || retryData?.code || null;
@@ -161,7 +173,7 @@ export async function POST(req: NextRequest) {
       if (!qrCodeBase64 && !pairingCode) {
         return NextResponse.json({
           status: 'error',
-          message: 'Não foi possível gerar o QR Code no servidor de WhatsApp. Tente novamente em instantes.'
+          message: 'Não foi possível gerar o QR Code no servidor de WhatsApp. Clique em "Reiniciar Conexão" para tentar novamente.'
         }, { status: 400 });
       }
 
@@ -189,6 +201,10 @@ export async function POST(req: NextRequest) {
       // Wait a moment for cleanup
       await new Promise(resolve => setTimeout(resolve, 2000));
 
+      const host = req.headers.get('host') || 'www.zapella.app';
+      const protocol = host.includes('localhost') ? 'http' : 'https';
+      const webhookUrl = `${protocol}://${host}/api/whatsapp/webhook`;
+
       // Recreate
       const createRes = await evoFetch('/instance/create', {
         method: 'POST',
@@ -198,7 +214,7 @@ export async function POST(req: NextRequest) {
           qrcode: true,
           integration: 'WHATSAPP-BAILEYS',
           webhook: {
-            url: `https://${req.headers.get('host') || 'watsapp-saas.vercel.app'}/api/whatsapp/webhook`,
+            url: webhookUrl,
             byEvents: false,
             base64: false,
             events: ['MESSAGES_SET', 'MESSAGES_UPSERT', 'MESSAGES_UPDATE', 'SEND_MESSAGE', 'CONNECTION_UPDATE']
@@ -206,17 +222,30 @@ export async function POST(req: NextRequest) {
         })
       });
 
+      let qrCode: string | null = null;
+      let pairingCode: string | null = null;
+
       if (createRes) {
         const createData = await createRes.json().catch(() => null);
-        const qrCode = createData?.qrcode?.base64 || createData?.base64 || createData?.code || null;
-        return NextResponse.json({
-          status: 'restarted',
-          qrCode,
-          message: 'Instância recriada. Escaneie o QR Code novamente.'
-        });
+        qrCode = createData?.qrcode?.base64 || createData?.base64 || createData?.code || null;
+        pairingCode = createData?.qrcode?.pairingCode || createData?.pairingCode || null;
       }
 
-      return NextResponse.json({ status: 'error', message: 'Falha ao recriar instância' }, { status: 500 });
+      if (!qrCode && !pairingCode) {
+        const connectRes = await evoFetch(`/instance/connect/${instanceName}`);
+        if (connectRes) {
+          const connectData = await connectRes.json().catch(() => null);
+          qrCode = connectData?.base64 || connectData?.qrcode?.base64 || connectData?.code || null;
+          pairingCode = connectData?.pairingCode || connectData?.qrcode?.pairingCode || null;
+        }
+      }
+
+      return NextResponse.json({
+        status: 'connecting',
+        qrCode,
+        pairingCode,
+        message: 'Instância recriada com sucesso. Escaneie o QR Code.'
+      });
     }
 
     return NextResponse.json({ error: 'Ação inválida. Use: connect, disconnect, restart' }, { status: 400 });

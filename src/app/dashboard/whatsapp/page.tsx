@@ -95,6 +95,43 @@ export default function WhatsAppConnectionPage() {
     }
   };
 
+  const handleRestart = async () => {
+    setIsConnecting(true);
+    setStatus('connecting');
+    setErrorMessage(null);
+    setQrCodeImg(null);
+    setPairingCode(null);
+
+    try {
+      const res = await fetch('/api/whatsapp/instance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'restart' })
+      });
+      const data = await res.json();
+
+      if (data.qrCode) {
+        const src = data.qrCode.startsWith('data:')
+          ? data.qrCode
+          : `data:image/png;base64,${data.qrCode}`;
+        setQrCodeImg(src);
+      }
+      if (data.pairingCode) {
+        setPairingCode(data.pairingCode);
+      }
+      if (data.status === 'error') {
+        setErrorMessage(data.message || 'Falha ao reiniciar a conexão de WhatsApp.');
+        setStatus('disconnected');
+      }
+    } catch (err: any) {
+      console.error('Erro ao reiniciar WhatsApp:', err);
+      setErrorMessage('Erro de rede ao tentar reiniciar a instância.');
+      setStatus('disconnected');
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
   const handleDisconnect = async () => {
     if (!confirm('Deseja desconectar este número de WhatsApp?')) return;
     try {
@@ -123,9 +160,19 @@ export default function WhatsAppConnectionPage() {
 
         {/* Error Banner */}
         {errorMessage && (
-          <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl text-xs flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
-            <span>{errorMessage}</span>
+          <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+              <span>{errorMessage}</span>
+            </div>
+            <button
+              onClick={handleRestart}
+              disabled={isConnecting}
+              className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold shrink-0 transition-colors flex items-center gap-1.5"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isConnecting ? 'animate-spin' : ''}`} />
+              <span>Reiniciar Conexão</span>
+            </button>
           </div>
         )}
 
@@ -192,20 +239,30 @@ export default function WhatsAppConnectionPage() {
                   <span>Gerar QR Code</span>
                 </button>
 
+                <button
+                  onClick={handleRestart}
+                  disabled={isConnecting}
+                  title="Limpa sessões travadas e recria a conexão do zero"
+                  className="px-3.5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-all flex items-center gap-1.5"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isConnecting ? 'animate-spin' : ''}`} />
+                  <span>Reiniciar Sessão</span>
+                </button>
+
                 <div className="flex items-center gap-2 border-l border-slate-200 pl-3">
                   <input
                     type="text"
                     placeholder="DDD + Número (ex: 11999999999)"
                     value={phoneInput}
                     onChange={(e) => setPhoneInput(e.target.value)}
-                    className="px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-800 w-52 focus:outline-none focus:border-[#00E676] font-mono"
+                    className="px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-800 w-44 focus:outline-none focus:border-[#00E676] font-mono"
                   />
                   <button
                     onClick={() => handleConnect(true)}
                     disabled={isConnecting || !phoneInput.trim()}
-                    className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white text-xs font-semibold shadow-sm transition-all shrink-0"
+                    className="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white text-xs font-semibold shadow-sm transition-all shrink-0"
                   >
-                    <span>Código 8 Dígitos</span>
+                    <span>Código</span>
                   </button>
                 </div>
               </>
@@ -257,6 +314,15 @@ export default function WhatsAppConnectionPage() {
                   <p className="text-xs font-bold text-[#2E7D5A]">QR Code Prontinho!</p>
                   <p className="text-[11px] text-slate-500 mt-0.5">Abra seu WhatsApp &gt; Dispositivos Conectados e escaneie a imagem acima.</p>
                 </div>
+
+                <button
+                  onClick={() => handleConnect(false)}
+                  disabled={isConnecting}
+                  className="text-xs text-[#128C7E] hover:underline font-semibold flex items-center gap-1 mx-auto"
+                >
+                  <RefreshCw className={`w-3 h-3 ${isConnecting ? 'animate-spin' : ''}`} />
+                  <span>Atualizar QR Code</span>
+                </button>
 
                 {pairingCode && (
                   <div className="pt-2">
