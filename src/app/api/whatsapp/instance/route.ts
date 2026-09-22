@@ -64,9 +64,17 @@ export async function GET(req: NextRequest) {
     }
 
     // Check for mobile disconnection (conflict 401 or device_removed)
+    // IMPORTANT: Only consider it a conflict if the disconnection happened AFTER or AT the last update,
+    // because Evolution API retains historical disconnectionReasonCode in the database after reconnecting.
+    const hasDisconnection = !!inst.disconnectionAt;
+    const isDisconnectionRecent = hasDisconnection && inst.updatedAt
+      ? new Date(inst.disconnectionAt).getTime() >= new Date(inst.updatedAt).getTime()
+      : false;
+
     const isConflict =
-      inst.disconnectionReasonCode === 401 ||
-      (typeof inst.disconnectionObject === 'string' && inst.disconnectionObject.includes('device_removed'));
+      isDisconnectionRecent &&
+      (inst.disconnectionReasonCode === 401 ||
+       (typeof inst.disconnectionObject === 'string' && inst.disconnectionObject.includes('device_removed')));
 
     if (inst.connectionStatus === 'open' && !isConflict) {
       // Ensure webhook is configured (fire and forget)
