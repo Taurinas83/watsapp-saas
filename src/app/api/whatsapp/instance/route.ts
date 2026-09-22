@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { syncWhatsAppStatusToDb } from '@/lib/whatsapp-sync';
 
 const rawUrl = process.env.EVOLUTION_API_URL || 'https://evolution-api-production-5589.up.railway.app';
 const EVOLUTION_URL = rawUrl.trim().replace(/\/+$/, '');
@@ -89,6 +90,9 @@ export async function GET(req: NextRequest) {
         formattedPhone = `+${country} (${ddd}) ${part1}-${part2}`;
       }
 
+      // Sincronizar status conectado no banco Supabase
+      syncWhatsAppStatusToDb(instanceName, 'connected', rawNumber).catch(() => null);
+
       return NextResponse.json({
         status: 'connected',
         phone: formattedPhone,
@@ -98,6 +102,9 @@ export async function GET(req: NextRequest) {
         messageCount: inst._count?.Message || 0,
       });
     }
+
+    // Sincronizar status desconectado no banco Supabase
+    syncWhatsAppStatusToDb(instanceName, 'disconnected').catch(() => null);
 
     return NextResponse.json({ status: 'disconnected' });
   } catch (err: any) {
@@ -195,11 +202,13 @@ export async function POST(req: NextRequest) {
     if (action === 'disconnect') {
       await evoFetch(`/instance/logout/${instanceName}`, { method: 'DELETE' });
       await evoFetch(`/instance/delete/${instanceName}`, { method: 'DELETE' });
+      await syncWhatsAppStatusToDb(instanceName, 'disconnected');
       return NextResponse.json({ status: 'disconnected' });
     }
 
     if (action === 'restart') {
       // Delete and recreate the instance
+      await syncWhatsAppStatusToDb(instanceName, 'disconnected');
       await evoFetch(`/instance/logout/${instanceName}`, { method: 'DELETE' });
       await evoFetch(`/instance/delete/${instanceName}`, { method: 'DELETE' });
 

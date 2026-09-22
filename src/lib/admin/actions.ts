@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/client';
 import { Organization, Profile, AdminAuditLog, Invoice, OrganizationStatus } from '@/types';
+import { getInstanceName, syncWhatsAppStatusToDb } from '@/lib/whatsapp-sync';
 
 /**
  * PLAN TIER PRICING CONSTANTS (MRR calculation fallback)
@@ -429,19 +430,60 @@ export async function fetchAdminTenants(query?: string, statusFilter?: string): 
     return [];
   }
 
-  const tenants: TenantListItem[] = (rawOrgs || []).map((item: any) => {
-    const primaryProfile = Array.isArray(item.profiles) && item.profiles.length > 0
-      ? item.profiles[0]
-      : null;
+  // Obter instâncias em tempo real da Evolution API para garantir precisão instantânea
+  const liveInstancesMap = new Map<string, string>();
+  try {
+    const rawUrl = process.env.EVOLUTION_API_URL || 'https://evolution-api-production-5589.up.railway.app';
+    const evoUrl = rawUrl.trim().replace(/\/+$/, '');
+    const rawKey = process.env.EVOLUTION_API_KEY || 'e5039cbd79c8df9f44f542e9bf4b21bc3ae9a1f191647979f80697888a5a2360';
+    const evoKey = rawKey.trim();
 
-    const primaryAttendant = Array.isArray(item.attendants) && item.attendants.length > 0
-      ? item.attendants[0]
-      : null;
+    const evoRes = await fetch(`${evoUrl}/instance/fetchInstances`, {
+      headers: { apikey: evoKey },
+      signal: AbortSignal.timeout(3000),
+    });
+    if (evoRes.ok) {
+      const list = await evoRes.json();
+      if (Array.isArray(list)) {
+        for (const inst of list) {
+          if (inst?.name) {
+            liveInstancesMap.set(inst.name, inst.connectionStatus);
+          }
+        }
+      }
+    }
+  } catch (e) {
+    // Non-blocking: fallback suave para o status salvo no banco Supabase
+  }
+
+  const tenants: TenantListItem[] = (rawOrgs || []).map((item: any) => {
+    const primaryProfile = Array.isArray(item.profiles)
+      ? (item.profiles.length > 0 ? item.profiles[0] : null)
+      : (item.profiles || null);
+
+    const primaryAttendant = Array.isArray(item.attendants)
+      ? (item.attendants.length > 0 ? item.attendants[0] : null)
+      : (item.attendants || null);
 
     let trialDaysLeft: number | null = null;
     if (item.trial_ends_at) {
       const diff = new Date(item.trial_ends_at).getTime() - new Date().getTime();
       trialDaysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
+    }
+
+    const instanceName = getInstanceName(item.id);
+    const liveStatus = liveInstancesMap.get(instanceName);
+    const isLiveConnected = liveStatus === 'open';
+    const isDbConnected = primaryAttendant?.whatsapp_status === 'connected';
+
+    // Prioriza status da Evolution API se a lista foi retornada, senão usa o banco
+    const attendantConnected = liveInstancesMap.size > 0
+      ? isLiveConnected
+      : isDbConnected;
+
+    // Se houver discrepância entre a Evolution API e o banco de dados, sincroniza em background
+    if (liveInstancesMap.size > 0 && isLiveConnected !== isDbConnected) {
+      syncWhatsAppStatusToDb(item.id, isLiveConnected ? 'connected' : 'disconnected').catch(() => null);
     }
 
     return {
@@ -461,7 +503,7 @@ export async function fetchAdminTenants(query?: string, statusFilter?: string): 
       profileId: primaryProfile?.id,
       ownerName: primaryProfile?.full_name || 'Não informado',
       ownerEmail: primaryProfile?.email || 'sem-email@zapella.com',
-      attendantConnected: primaryAttendant?.whatsapp_status === 'connected',
+      attendantConnected,
       messagesCount: 0, // Enriched if needed
     };
   });

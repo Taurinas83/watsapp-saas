@@ -6,6 +6,7 @@ import { initialAttendant, initialKnowledgeItems } from '@/lib/mock-data';
 import { DEFAULT_ORG_ID } from '@/lib/constants';
 import { Message } from '@/types';
 import { syncCrmLead } from '@/lib/crm/sync';
+import { syncWhatsAppStatusToDb } from '@/lib/whatsapp-sync';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONFIGURAÇÕES GLOBAIS DE PROTEÇÃO
@@ -156,6 +157,16 @@ export async function POST(req: NextRequest) {
     const instance = payload?.instance || payload?.instanceName || 'default_org';
     const event = (payload?.event || payload?.type || '').toUpperCase();
 
+    // ── REGRA 0: ATUALIZAÇÃO DE CONEXÃO DO WHATSAPP (CONNECTION_UPDATE) ───────
+    if (event === 'CONNECTION_UPDATE') {
+      const state = (payload?.data?.state || payload?.state || payload?.data?.connection || '').toLowerCase();
+      const rawNumber = payload?.data?.ownerJid ? payload.data.ownerJid.split('@')[0] : '';
+      const newStatus = state === 'open' ? 'connected' : (state === 'connecting' ? 'connecting' : 'disconnected');
+
+      await syncWhatsAppStatusToDb(instance, newStatus, rawNumber);
+      return NextResponse.json({ status: 'success', event, newStatus });
+    }
+
     // ── REGRA 1: IGNORAR MESSAGES_SET E EVENTOS HISTÓRICOS / NÃO MENSAGEM ────
     const ignoredEvents = [
       'MESSAGES_SET',
@@ -167,7 +178,6 @@ export async function POST(req: NextRequest) {
       'CHATS_UPDATE',
       'CONTACTS_SET',
       'CONTACTS.SET',
-      'CONNECTION_UPDATE',
       'QRCODE_UPDATED',
       'PRESENCE_UPDATE',
       'SEND_MESSAGE',
