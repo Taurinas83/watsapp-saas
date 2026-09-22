@@ -76,6 +76,10 @@ export async function updateAttendant(attendant: Partial<Attendant> & { organiza
       copilot_mode: attendant.copilot_mode ?? false,
       is_paused: attendant.is_paused ?? false,
       handover_keywords: attendant.handover_keywords || ['atendente', 'humano', 'pessoa', 'falar com alguém'],
+      calendar_link: attendant.calendar_link || null,
+      calendar_instructions: attendant.calendar_instructions || null,
+      group_invite_link: attendant.group_invite_link || null,
+      group_invite_instructions: attendant.group_invite_instructions || null,
       updated_at: new Date().toISOString()
     }, { onConflict: 'organization_id' });
 

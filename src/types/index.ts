@@ -91,7 +91,27 @@ export interface Attendant {
   allowed_topics?: string[];
   is_paused?: boolean;
   handover_keywords?: string[];
+  calendar_link?: string;
+  calendar_instructions?: string;
+  group_invite_link?: string;
+  group_invite_instructions?: string;
   updated_at?: string;
+}
+
+export type ScheduledMessageStatus = 'pending' | 'processing' | 'sent' | 'failed' | 'cancelled';
+
+export interface ScheduledMessage {
+  id: string;
+  organization_id: string;
+  target_jid: string;
+  target_name?: string;
+  message_content: string;
+  media_url?: string;
+  scheduled_for: string;
+  status: ScheduledMessageStatus;
+  sent_at?: string;
+  error_message?: string;
+  created_at: string;
 }
 
 export interface AIAuditLog {

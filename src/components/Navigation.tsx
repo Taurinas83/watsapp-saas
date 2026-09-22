@@ -16,7 +16,8 @@ import {
   Building2,
   Sparkles,
   Zap,
-  ShieldCheck
+  ShieldCheck,
+  CalendarClock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getCurrentUserOrganizationId, fetchMonthlyUsage } from '@/lib/supabase/actions';
@@ -76,6 +77,12 @@ export function Navigation({ userRole = 'admin' }: NavProps) {
       name: 'Supervisão de Conversas',
       href: '/dashboard/supervision',
       icon: Eye
+    },
+    {
+      name: 'Mensagens Agendadas',
+      href: '/dashboard/broadcast',
+      icon: CalendarClock,
+      badge: 'Grupos'
     },
     {
       name: 'Métricas & Relatórios',

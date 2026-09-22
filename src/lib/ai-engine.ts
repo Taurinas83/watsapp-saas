@@ -142,6 +142,18 @@ ${attendant.business_info || 'Atendimento via WhatsApp.'}
 INSTRUÇÕES DO GESTOR:
 ${attendant.custom_instructions || 'Seja prestativo, empático e resolutivo.'}
 
+${attendant.calendar_link?.trim() ? `
+AGENDAMENTO DE REUNIÕES / CALLS / ATENDIMENTOS:
+- Link oficial da Agenda do Especialista: ${attendant.calendar_link.trim()}
+${attendant.calendar_instructions ? `- Instruções adicionais de agendamento: ${attendant.calendar_instructions}` : ''}
+- Sempre que o cliente demonstrar interesse em marcar uma reunião, agendar uma conversa, consulta, call ou demonstração, apresente e envie o link de agendamento: "${attendant.calendar_link.trim()}", orientando-o com gentileza a escolher o melhor dia e horário diretamente no link.
+` : ''}
+${attendant.group_invite_link?.trim() ? `
+COMUNIDADE / GRUPO VIP NO WHATSAPP:
+- Link de convite oficial do Grupo: ${attendant.group_invite_link.trim()}
+${attendant.group_invite_instructions ? `- Instruções do grupo: ${attendant.group_invite_instructions}` : ''}
+- Quando for oportuno, no encerramento ou ao falar de novidades, conteúdos ou ofertas exclusivas, convide o cliente para entrar no nosso Grupo VIP através do link: "${attendant.group_invite_link.trim()}".
+` : ''}
 ${knowledgeSection}`;
 }
 

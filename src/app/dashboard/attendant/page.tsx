@@ -7,7 +7,7 @@ import { Attendant, PersonalityType } from '@/types';
 import { buildSystemPrompt } from '@/lib/ai-engine';
 import { fetchAttendant, updateAttendant, getCurrentUserOrganizationId } from '@/lib/supabase/actions';
 import { DEFAULT_ORG_ID } from '@/lib/constants';
-import { Bot, Sparkles, Smile, ShieldCheck, Coffee, Check, Save, Info, Terminal, RefreshCw } from 'lucide-react';
+import { Bot, Sparkles, Smile, ShieldCheck, Coffee, Check, Save, Info, Terminal, RefreshCw, Calendar, Users } from 'lucide-react';
 
 export default function AttendantConfigPage() {
   const [attendant, setAttendant] = useState<Attendant>(initialAttendant);
@@ -247,6 +247,84 @@ export default function AttendantConfigPage() {
                   >
                     + Adicionar
                   </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Agendamentos & Agenda de Calls */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-[#128C7E]" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">Agendamento de Calls & Consultas</h3>
+              </div>
+              <p className="text-xs text-slate-500">
+                Adicione o link da sua agenda oficial (Calendly, Cal.com ou Google Calendar). A IA identificará o interesse do cliente e enviará o link automaticamente no WhatsApp.
+              </p>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    Link da Agenda (Calendly / Cal.com / Google Calendar)
+                  </label>
+                  <input
+                    type="url"
+                    value={attendant.calendar_link || ''}
+                    onChange={(e) => setAttendant({ ...attendant, calendar_link: e.target.value })}
+                    placeholder="https://calendly.com/sua-empresa/reuniao"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#128C7E]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    Instruções Específicas de Agendamento (Opcional)
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={attendant.calendar_instructions || ''}
+                    onChange={(e) => setAttendant({ ...attendant, calendar_instructions: e.target.value })}
+                    placeholder="Ex: Ofereça o link apenas se o cliente perguntar sobre planos ou pedir uma demonstração..."
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#128C7E]"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Grupo VIP & Comunidade WhatsApp */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-[#128C7E]" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">Comunidade & Grupo VIP no WhatsApp</h3>
+              </div>
+              <p className="text-xs text-slate-500">
+                Cole o link de convite do seu grupo de WhatsApp. A IA poderá convidar os clientes atendidos para fazerem parte da sua comunidade.
+              </p>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    Link de Convite do Grupo de WhatsApp
+                  </label>
+                  <input
+                    type="url"
+                    value={attendant.group_invite_link || ''}
+                    onChange={(e) => setAttendant({ ...attendant, group_invite_link: e.target.value })}
+                    placeholder="https://chat.whatsapp.com/seu-codigo-de-convite"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#128C7E]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    Instruções para o Convite do Grupo (Opcional)
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={attendant.group_invite_instructions || ''}
+                    onChange={(e) => setAttendant({ ...attendant, group_invite_instructions: e.target.value })}
+                    placeholder="Ex: Convide o cliente para o grupo VIP de novidades ao final do atendimento se ele demonstrar interesse..."
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#128C7E]"
+                  />
                 </div>
               </div>
             </div>
