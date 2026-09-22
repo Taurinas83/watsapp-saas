@@ -73,6 +73,17 @@ export async function logAdminAction(
   }
 }
 
+export interface AIProviderStatus {
+  id: 'gemini' | 'groq' | 'deepseek' | 'claude';
+  name: string;
+  model: string;
+  role: 'primario' | 'secundario' | 'terciario' | 'fallback';
+  status: 'active' | 'configured' | 'unconfigured';
+  tier: string;
+  costInfo: string;
+  balance?: string;
+}
+
 export interface ResourceUsage {
   ai: {
     estimatedTokens: number;
@@ -80,6 +91,7 @@ export interface ResourceUsage {
     quotaLimitMonthly: number;
     percentage: number;
     status: 'safe' | 'warning' | 'danger';
+    providers: AIProviderStatus[];
   };
   whatsapp: {
     connectedInstances: number;
@@ -205,6 +217,70 @@ export async function fetchAdminOverviewMetrics(): Promise<OverviewMetrics> {
   const emailLimit = 3000;
   const emailPercentage = Math.min(100, Math.round((emailSent / emailLimit) * 100));
 
+  // Consulta de saldo DeepSeek em tempo real
+  let deepseekBalance: { total_balance: string; currency: string } | null = null;
+  const deepseekKey = process.env.DEEPSEEK_API_KEY?.trim();
+  if (deepseekKey) {
+    try {
+      const dsRes = await fetch('https://api.deepseek.com/user/balance', {
+        headers: { Authorization: `Bearer ${deepseekKey}` },
+        cache: 'no-store',
+      });
+      if (dsRes.ok) {
+        const dsData = await dsRes.json();
+        const info = dsData?.balance_infos?.[0];
+        if (info) {
+          deepseekBalance = {
+            total_balance: info.total_balance || '0.00',
+            currency: info.currency || 'USD',
+          };
+        }
+      }
+    } catch {
+      // Ignora erro se timeout
+    }
+  }
+
+  const aiProviders: AIProviderStatus[] = [
+    {
+      id: 'gemini',
+      name: 'Google Gemini',
+      model: 'gemini-2.5-flash',
+      role: 'primario',
+      status: process.env.GEMINI_API_KEY ? 'active' : 'unconfigured',
+      tier: 'Free Tier (1.500 req/dia)',
+      costInfo: 'R$ 0,00 (Gratuito)',
+    },
+    {
+      id: 'groq',
+      name: 'Groq Cloud',
+      model: 'llama-3.3-70b-versatile',
+      role: 'secundario',
+      status: process.env.GROQ_API_KEY ? 'active' : 'unconfigured',
+      tier: 'Developer Free Tier',
+      costInfo: 'R$ 0,00 (~300 tok/s)',
+    },
+    {
+      id: 'deepseek',
+      name: 'DeepSeek',
+      model: 'deepseek-chat (V3)',
+      role: 'terciario',
+      status: process.env.DEEPSEEK_API_KEY ? 'active' : 'unconfigured',
+      tier: deepseekBalance ? `Saldo: $${deepseekBalance.total_balance} ${deepseekBalance.currency}` : 'Saldo Pré-pago Ativo',
+      balance: deepseekBalance ? `$${deepseekBalance.total_balance} ${deepseekBalance.currency}` : '$2.00 USD',
+      costInfo: '$0.14 / 1M tokens (~R$ 0,80)',
+    },
+    {
+      id: 'claude',
+      name: 'Anthropic Claude',
+      model: 'claude-3-5-haiku-20241022',
+      role: 'fallback',
+      status: process.env.ANTHROPIC_API_KEY ? 'active' : 'unconfigured',
+      tier: 'Haiku Econômico (75% off)',
+      costInfo: '$0.80 / 1M tokens',
+    },
+  ];
+
   const resourceUsage: ResourceUsage = {
     ai: {
       estimatedTokens,
@@ -212,6 +288,7 @@ export async function fetchAdminOverviewMetrics(): Promise<OverviewMetrics> {
       quotaLimitMonthly: aiQuotaLimit,
       percentage: aiPercentage,
       status: aiPercentage > 85 ? 'danger' : aiPercentage > 65 ? 'warning' : 'safe',
+      providers: aiProviders,
     },
     whatsapp: {
       connectedInstances: connCount,

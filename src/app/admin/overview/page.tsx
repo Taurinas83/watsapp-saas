@@ -16,7 +16,8 @@ import {
   Cpu,
   Smartphone,
   Database,
-  Mail
+  Mail,
+  Sparkles
 } from 'lucide-react';
 import { fetchAdminOverviewMetrics, OverviewMetrics } from '@/lib/admin/actions';
 
@@ -334,6 +335,63 @@ export default function AdminOverviewPage() {
               <span className="text-[#667781]">Faturas Processadas:</span>
               <span className="font-semibold text-slate-700">Tempo Real</span>
             </div>
+          </div>
+        </div>
+
+        {/* Multi-LLM Engine Status & Saldo dos Provedores Conectados */}
+        <div className="pt-4 border-t border-slate-100">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-[#128C7E]" />
+              <h4 className="text-xs font-bold text-[#111B21]">Status & Saldos dos Provedores Multi-LLM Conectados</h4>
+            </div>
+            <span className="text-[10px] font-semibold text-[#128C7E] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+              Cascata Inteligente de Mínimo Custo Ativa (Zero Custo Primário)
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {metrics?.resourceUsage?.ai?.providers?.map((provider) => (
+              <div
+                key={provider.id}
+                className="p-3.5 rounded-xl border border-slate-200 bg-white hover:border-[#128C7E]/40 hover:shadow-xs transition-all space-y-2.5"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-[#111B21]">{provider.name}</span>
+                    <span className="text-[9px] font-semibold uppercase px-1.5 py-0.2 rounded bg-slate-100 text-slate-600">
+                      {provider.role}
+                    </span>
+                  </div>
+                  <span
+                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                      provider.status === 'active'
+                        ? 'bg-emerald-50 text-[#128C7E] border border-emerald-200'
+                        : 'bg-slate-100 text-slate-500'
+                    }`}
+                  >
+                    {provider.status === 'active' ? 'CONECTADO' : 'OFFLINE'}
+                  </span>
+                </div>
+
+                <div className="text-[11px] font-mono text-slate-700 bg-slate-50 px-2 py-1 rounded border border-slate-100 truncate">
+                  {provider.model}
+                </div>
+
+                <div className="space-y-1.5 text-[11px] pt-1">
+                  <div className="flex items-center justify-between text-slate-600">
+                    <span>Plano / Saldo:</span>
+                    <span className="font-bold text-slate-900 bg-slate-100 px-1.5 py-0.5 rounded">
+                      {provider.tier}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-slate-600">
+                    <span>Custo Estimado:</span>
+                    <span className="font-bold text-[#128C7E]">{provider.costInfo}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
