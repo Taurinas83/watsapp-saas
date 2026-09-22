@@ -302,8 +302,11 @@ export async function fetchAdminOverviewMetrics(): Promise<OverviewMetrics> {
 export interface TenantListItem extends Organization {
   ownerName: string;
   ownerEmail: string;
+  profileId?: string;
   attendantConnected: boolean;
   messagesCount: number;
+  trial_ends_at?: string | null;
+  trialDaysLeft?: number | null;
 }
 
 /**
@@ -326,6 +329,7 @@ export async function fetchAdminTenants(query?: string, statusFilter?: string): 
       suspended_reason,
       custom_mrr,
       billing_cycle,
+      trial_ends_at,
       profiles (
         id,
         full_name,
@@ -351,11 +355,17 @@ export async function fetchAdminTenants(query?: string, statusFilter?: string): 
   const tenants: TenantListItem[] = (rawOrgs || []).map((item: any) => {
     const primaryProfile = Array.isArray(item.profiles) && item.profiles.length > 0
       ? item.profiles[0]
-      : { full_name: 'Não informado', email: 'sem-email@zapella.com' };
+      : null;
 
     const primaryAttendant = Array.isArray(item.attendants) && item.attendants.length > 0
       ? item.attendants[0]
       : null;
+
+    let trialDaysLeft: number | null = null;
+    if (item.trial_ends_at) {
+      const diff = new Date(item.trial_ends_at).getTime() - new Date().getTime();
+      trialDaysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
+    }
 
     return {
       id: item.id,
@@ -369,8 +379,11 @@ export async function fetchAdminTenants(query?: string, statusFilter?: string): 
       suspended_reason: item.suspended_reason,
       custom_mrr: item.custom_mrr || PLAN_PRICES[item.plan_tier || 'starter'] || 97,
       billing_cycle: item.billing_cycle || 'monthly',
-      ownerName: primaryProfile.full_name || 'Sem nome',
-      ownerEmail: primaryProfile.email || '',
+      trial_ends_at: item.trial_ends_at,
+      trialDaysLeft,
+      profileId: primaryProfile?.id,
+      ownerName: primaryProfile?.full_name || 'Não informado',
+      ownerEmail: primaryProfile?.email || 'sem-email@zapella.com',
       attendantConnected: primaryAttendant?.whatsapp_status === 'connected',
       messagesCount: 0, // Enriched if needed
     };
@@ -386,6 +399,78 @@ export async function fetchAdminTenants(query?: string, statusFilter?: string): 
   }
 
   return tenants;
+}
+
+export interface UpdateTenantData {
+  organizationId: string;
+  organizationName: string;
+  profileId?: string;
+  ownerName?: string;
+  ownerEmail?: string;
+  planTier: string;
+  status: OrganizationStatus;
+  customMrr?: number;
+  trialEndsAt?: string | null;
+  suspendedReason?: string | null;
+}
+
+/**
+ * Super Admin: Update Complete Tenant & Owner Profile Info
+ */
+export async function updateTenantComplete(data: UpdateTenantData): Promise<boolean> {
+  const supabase = createClient();
+  try {
+    const mrrValue = data.customMrr !== undefined ? data.customMrr : (PLAN_PRICES[data.planTier] || 97.00);
+
+    // 1. Atualizar Organização
+    const { error: orgError } = await supabase
+      .from('organizations')
+      .update({
+        name: data.organizationName,
+        plan_tier: data.planTier,
+        status: data.status,
+        custom_mrr: mrrValue,
+        trial_ends_at: data.trialEndsAt || null,
+        suspended_reason: data.status === 'suspended' ? (data.suspendedReason || 'Suspenso pelo Super Admin') : null,
+      })
+      .eq('id', data.organizationId);
+
+    if (orgError) {
+      console.error('Error updating organization:', orgError);
+      return false;
+    }
+
+    // 2. Atualizar Perfil do Assinante se existir profileId
+    if (data.profileId) {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          full_name: data.ownerName,
+          email: data.ownerEmail,
+        })
+        .eq('id', data.profileId);
+
+      if (profileError) {
+        console.error('Error updating profile:', profileError);
+      }
+    }
+
+    // 3. Registrar Log de Auditoria
+    await logAdminAction('tenant.complete_update', 'organization', data.organizationId, {
+      name: data.organizationName,
+      plan_tier: data.planTier,
+      status: data.status,
+      custom_mrr: mrrValue,
+      trial_ends_at: data.trialEndsAt,
+      owner_name: data.ownerName,
+      owner_email: data.ownerEmail,
+    });
+
+    return true;
+  } catch (err) {
+    console.error('Error in updateTenantComplete:', err);
+    return false;
+  }
 }
 
 /**

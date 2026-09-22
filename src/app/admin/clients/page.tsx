@@ -28,6 +28,7 @@ import {
   fetchAdminTenants,
   updateTenantStatus,
   updateTenantPlan,
+  updateTenantComplete,
   TenantListItem,
   PLAN_PRICES
 } from '@/lib/admin/actions';
@@ -42,7 +43,7 @@ export default function AdminClientsPage() {
 
   // Modals state
   const [selectedTenant, setSelectedTenant] = useState<TenantListItem | null>(null);
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [isSuspendModalOpen, setIsSuspendModalOpen] = useState(false);
 
@@ -51,6 +52,16 @@ export default function AdminClientsPage() {
   const [newMrr, setNewMrr] = useState<number>(97);
   const [suspendReason, setSuspendReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Form states for Complete Edit Modal
+  const [editOrgName, setEditOrgName] = useState('');
+  const [editOwnerName, setEditOwnerName] = useState('');
+  const [editOwnerEmail, setEditOwnerEmail] = useState('');
+  const [editPlanTier, setEditPlanTier] = useState('starter');
+  const [editStatus, setEditStatus] = useState<OrganizationStatus>('trialing');
+  const [editCustomMrr, setEditCustomMrr] = useState<number>(97);
+  const [editTrialEndsAt, setEditTrialEndsAt] = useState('');
+  const [editSuspendedReason, setEditSuspendedReason] = useState('');
 
   const loadTenants = async () => {
     setLoading(true);
@@ -71,6 +82,57 @@ export default function AdminClientsPage() {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     loadTenants();
+  };
+
+  const handleOpenEditModal = (tenant: TenantListItem) => {
+    setSelectedTenant(tenant);
+    setEditOrgName(tenant.name);
+    setEditOwnerName(tenant.ownerName !== 'Não informado' ? tenant.ownerName : '');
+    setEditOwnerEmail(tenant.ownerEmail !== 'sem-email@zapella.com' ? tenant.ownerEmail : '');
+    setEditPlanTier(tenant.plan_tier || 'starter');
+    setEditStatus((tenant.status as OrganizationStatus) || 'trialing');
+    setEditCustomMrr(tenant.custom_mrr || PLAN_PRICES[tenant.plan_tier || 'starter'] || 97);
+    setEditTrialEndsAt(
+      tenant.trial_ends_at
+        ? new Date(tenant.trial_ends_at).toISOString().split('T')[0]
+        : new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]
+    );
+    setEditSuspendedReason(tenant.suspended_reason || '');
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedTenant) return;
+    setSubmitting(true);
+    try {
+      const ok = await updateTenantComplete({
+        organizationId: selectedTenant.id,
+        organizationName: editOrgName,
+        profileId: selectedTenant.profileId,
+        ownerName: editOwnerName,
+        ownerEmail: editOwnerEmail,
+        planTier: editPlanTier,
+        status: editStatus,
+        customMrr: editCustomMrr,
+        trialEndsAt: editTrialEndsAt ? new Date(editTrialEndsAt).toISOString() : null,
+        suspendedReason: editStatus === 'suspended' ? editSuspendedReason : null,
+      });
+
+      if (ok) {
+        setIsEditModalOpen(false);
+        loadTenants();
+      }
+    } catch (err) {
+      console.error('Erro ao atualizar assinante:', err);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleExtendTrialDays = (days: number) => {
+    const currentBase = editTrialEndsAt ? new Date(editTrialEndsAt) : new Date();
+    const newDate = new Date(currentBase.getTime() + days * 86400000);
+    setEditTrialEndsAt(newDate.toISOString().split('T')[0]);
   };
 
   const handleOpenPlanModal = (tenant: TenantListItem) => {
@@ -128,7 +190,7 @@ export default function AdminClientsPage() {
         id: tenant.id,
         name: tenant.name,
       }));
-      router.push('/dashboard');
+      router.push('/dashboard/attendant');
     }
   };
 
@@ -283,11 +345,31 @@ export default function AdminClientsPage() {
 
                       {/* Status */}
                       <td className="py-3.5 px-5">
-                        <span
-                          className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}
-                        >
-                          {tenant.status || 'active'}
-                        </span>
+                        {tenant.status === 'trialing' ? (
+                          <div className="space-y-0.5">
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${
+                              tenant.trialDaysLeft && tenant.trialDaysLeft > 0
+                                ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                : 'bg-amber-50 text-amber-700 border-amber-200'
+                            }`}>
+                              <Clock className="w-3 h-3" />
+                              {tenant.trialDaysLeft && tenant.trialDaysLeft > 0
+                                ? `Trial (${tenant.trialDaysLeft}d)`
+                                : 'Trial Expirado'}
+                            </span>
+                            {tenant.trial_ends_at && (
+                              <span className="block text-[10px] text-slate-400">
+                                Até {new Date(tenant.trial_ends_at).toLocaleDateString('pt-BR')}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}
+                          >
+                            {tenant.status === 'active' ? 'Ativo' : tenant.status === 'suspended' ? 'Suspenso' : tenant.status === 'canceled' ? 'Cancelado' : tenant.status}
+                          </span>
+                        )}
                       </td>
 
                       {/* Actions */}
@@ -296,10 +378,19 @@ export default function AdminClientsPage() {
                           {/* Impersonate */}
                           <button
                             onClick={() => handleImpersonate(tenant)}
-                            title="Acessar como Cliente (Impersonate)"
+                            title="Acessar como Cliente (Visão do Assinante)"
                             className="p-1.5 rounded-lg text-[#667781] hover:text-[#128C7E] hover:bg-slate-100 transition-colors"
                           >
                             <ExternalLink className="w-4 h-4" strokeWidth={1.75} />
+                          </button>
+
+                          {/* Edit Complete Info */}
+                          <button
+                            onClick={() => handleOpenEditModal(tenant)}
+                            title="Editar Cadastro Completo do Assinante"
+                            className="p-1.5 rounded-lg text-[#667781] hover:text-[#128C7E] hover:bg-slate-100 transition-colors"
+                          >
+                            <Edit className="w-4 h-4" strokeWidth={1.75} />
                           </button>
 
                           {/* Change Plan */}
@@ -337,6 +428,192 @@ export default function AdminClientsPage() {
           </table>
         </div>
       </div>
+
+      {/* MODAL 0: Editar Cadastro Completo do Assinante */}
+      {isEditModalOpen && selectedTenant && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 border border-slate-200 shadow-xl space-y-5 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-[#111B21]">Editar Cadastro do Assinante</h3>
+                <p className="text-xs text-[#667781]">Atualize dados cadastrais, plano e período de teste.</p>
+              </div>
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
+              >
+                <X className="w-4 h-4" strokeWidth={1.75} />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              {/* Nome da Empresa */}
+              <div>
+                <label className="block font-semibold text-[#111B21] mb-1">Nome da Empresa / Tenant</label>
+                <input
+                  type="text"
+                  value={editOrgName}
+                  onChange={(e) => setEditOrgName(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-[#111B21] font-medium"
+                />
+              </div>
+
+              {/* Responsável e Email em 2 colunas */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-[#111B21] mb-1">Nome do Responsável</label>
+                  <input
+                    type="text"
+                    value={editOwnerName}
+                    onChange={(e) => setEditOwnerName(e.target.value)}
+                    placeholder="Ex: Ana Maria Silva"
+                    className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-[#111B21] font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-[#111B21] mb-1">E-mail do Responsável</label>
+                  <input
+                    type="email"
+                    value={editOwnerEmail}
+                    onChange={(e) => setEditOwnerEmail(e.target.value)}
+                    placeholder="cliente@empresa.com"
+                    className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-[#111B21] font-medium"
+                  />
+                </div>
+              </div>
+
+              {/* Status e Plano */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-[#111B21] mb-1">Status Operacional</label>
+                  <select
+                    value={editStatus}
+                    onChange={(e) => setEditStatus(e.target.value as OrganizationStatus)}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-[#111B21] font-medium"
+                  >
+                    <option value="trialing">Em Período de Teste (Trial)</option>
+                    <option value="active">Ativo (Assinante Regular)</option>
+                    <option value="suspended">Suspenso</option>
+                    <option value="canceled">Cancelado</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-[#111B21] mb-1">Plano</label>
+                  <select
+                    value={editPlanTier}
+                    onChange={(e) => {
+                      const p = e.target.value;
+                      setEditPlanTier(p);
+                      setEditCustomMrr(PLAN_PRICES[p] || 97);
+                    }}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-[#111B21] font-medium"
+                  >
+                    <option value="starter">Starter - R$ 97/mês</option>
+                    <option value="pro">Pro - R$ 197/mês</option>
+                    <option value="enterprise">Enterprise - R$ 397/mês</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Período de Teste (Trial) */}
+              <div className="p-3.5 rounded-xl bg-blue-50/50 border border-blue-100 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="font-semibold text-blue-900 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Período de Teste (Data de Expiração)</span>
+                  </label>
+                  {selectedTenant.trialDaysLeft !== null && selectedTenant.trialDaysLeft !== undefined && (
+                    <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
+                      {selectedTenant.trialDaysLeft > 0 ? `${selectedTenant.trialDaysLeft} dias restantes` : 'Expirado'}
+                    </span>
+                  )}
+                </div>
+
+                <input
+                  type="date"
+                  value={editTrialEndsAt}
+                  onChange={(e) => setEditTrialEndsAt(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-blue-200 bg-white text-[#111B21] font-medium"
+                />
+
+                <div className="flex items-center gap-2 pt-1">
+                  <span className="text-[10px] text-blue-700 font-semibold">Prorrogar teste:</span>
+                  <button
+                    type="button"
+                    onClick={() => handleExtendTrialDays(7)}
+                    className="px-2.5 py-1 rounded-lg bg-white border border-blue-200 text-blue-800 text-[11px] font-semibold hover:bg-blue-50 transition-colors shadow-xs"
+                  >
+                    +7 dias
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleExtendTrialDays(15)}
+                    className="px-2.5 py-1 rounded-lg bg-white border border-blue-200 text-blue-800 text-[11px] font-semibold hover:bg-blue-50 transition-colors shadow-xs"
+                  >
+                    +15 dias
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleExtendTrialDays(30)}
+                    className="px-2.5 py-1 rounded-lg bg-white border border-blue-200 text-blue-800 text-[11px] font-semibold hover:bg-blue-50 transition-colors shadow-xs"
+                  >
+                    +30 dias
+                  </button>
+                </div>
+              </div>
+
+              {/* MRR Customizado */}
+              <div>
+                <label className="block font-semibold text-[#111B21] mb-1">
+                  Valor Customizado de MRR (R$)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={editCustomMrr}
+                  onChange={(e) => setEditCustomMrr(parseFloat(e.target.value) || 0)}
+                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-[#111B21] font-medium"
+                />
+              </div>
+
+              {/* Motivo da Suspensão se estiver suspenso */}
+              {editStatus === 'suspended' && (
+                <div>
+                  <label className="block font-semibold text-red-700 mb-1">
+                    Motivo da Suspensão
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={editSuspendedReason}
+                    onChange={(e) => setEditSuspendedReason(e.target.value)}
+                    placeholder="Ex: Fatura em atraso ou uso indevido"
+                    className="w-full p-2.5 rounded-xl border border-red-200 bg-red-50/30 focus:bg-white text-[#111B21]"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                disabled={submitting}
+                className="px-4 py-2 rounded-xl text-xs font-medium text-[#667781] hover:bg-slate-100 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                disabled={submitting}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-[#128C7E] hover:bg-[#0e7065] transition-colors"
+              >
+                {submitting ? 'Salvando...' : 'Salvar Dados do Assinante'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL 1: Alterar Plano & MRR */}
       {isPlanModalOpen && selectedTenant && (

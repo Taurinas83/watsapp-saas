@@ -44,9 +44,14 @@ export default function LoginPage() {
         if (error) throw error;
 
         if (data?.user && !data.session) {
-          setSuccessMsg('Cadastro realizado! Verifique seu e-mail para confirmar a conta.');
-          setLoading(false);
-          return;
+          // Com o trigger de auto-confirmação, realizamos o login imediato para entrar direto no painel
+          const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+          if (signInError) {
+            setSuccessMsg('Cadastro realizado com sucesso! Faça login para começar.');
+            setIsRegister(false);
+            setLoading(false);
+            return;
+          }
         }
 
         router.push('/dashboard/attendant');
