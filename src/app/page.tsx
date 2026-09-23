@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -34,11 +34,19 @@ import {
   DollarSign
 } from 'lucide-react';
 import { WhatsAppSimulatorModal } from '@/components/WhatsAppSimulatorModal';
+import { SupportChatModal } from '@/components/SupportChatModal';
 
 export default function LandingPage() {
   const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
+  const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
   const [activeTab, setActiveTab] = useState<'crm' | 'broadcast' | 'attendant' | 'knowledge' | 'inbox' | 'whatsapp'>('crm');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && (window.location.hash === '#suporte' || window.location.search.includes('suporte=true'))) {
+      setIsSupportOpen(true);
+    }
+  }, []);
 
   const faqs = [
     {
@@ -91,6 +99,13 @@ export default function LandingPage() {
           <a href="#como-funciona" className="hover:text-[#2E7D5A] transition-colors">Como Funciona</a>
           <a href="#planos" className="hover:text-[#2E7D5A] transition-colors">Planos & Preços</a>
           <a href="#faq" className="hover:text-[#2E7D5A] transition-colors">FAQ</a>
+          <button
+            onClick={() => setIsSupportOpen(true)}
+            className="hover:text-[#2E7D5A] transition-colors flex items-center gap-1 font-semibold text-xs"
+          >
+            <span>Suporte</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-[#00E676]" />
+          </button>
         </div>
 
         <div className="flex items-center gap-3">
@@ -1032,12 +1047,41 @@ export default function LandingPage() {
           </div>
           <p>© 2026 Zapella. Todos os direitos reservados.</p>
           <div className="flex items-center gap-6">
-            <a href="#" className="hover:text-[#171901] transition-colors">Termos de Uso</a>
-            <a href="#" className="hover:text-[#171901] transition-colors">Privacidade</a>
-            <a href="#" className="hover:text-[#171901] transition-colors">Suporte</a>
+            <Link href="/termos" className="hover:text-[#171901] transition-colors">Termos de Uso</Link>
+            <Link href="/privacidade" className="hover:text-[#171901] transition-colors">Privacidade</Link>
+            <button
+              onClick={() => setIsSupportOpen(true)}
+              className="hover:text-[#171901] transition-colors font-bold text-[#2E7D5A] flex items-center gap-1.5"
+            >
+              <span>Suporte</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-[#00E676]" />
+            </button>
           </div>
         </div>
       </footer>
+
+      {/* ── Floating Support Button (FAB) ── */}
+      <button
+        onClick={() => setIsSupportOpen(true)}
+        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-3 rounded-full text-[#171901] font-extrabold text-xs shadow-xl transition-all hover:scale-105 hover:opacity-95 active:scale-95 group border border-white/20"
+        style={{
+          background: 'linear-gradient(135deg, #00E676 0%, #1DE9B6 100%)',
+          boxShadow: '0 8px 24px rgba(0,230,118,0.35)',
+        }}
+        aria-label="Abrir suporte interativo"
+      >
+        <span className="relative flex h-2.5 w-2.5">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#171901] opacity-40" />
+          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#171901]" />
+        </span>
+        <MessageSquare className="w-4 h-4 text-[#171901]" />
+        <span>Suporte & Dúvidas</span>
+      </button>
+
+      {/* ── Interactive Support Chat (Sem IA, FAQ Direcionado) ── */}
+      {isSupportOpen && (
+        <SupportChatModal onClose={() => setIsSupportOpen(false)} />
+      )}
 
       {isSimulatorOpen && (
         <WhatsAppSimulatorModal onClose={() => setIsSimulatorOpen(false)} />
