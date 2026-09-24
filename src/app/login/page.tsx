@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Lock, Mail, Building, User, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Lock, Mail, Building, User, Smartphone, CheckCircle2, ShieldCheck } from 'lucide-react';
 
 import { createClient } from '@/lib/supabase/client';
 
@@ -15,9 +15,18 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [companyName, setCompanyName] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  const formatPhone = (val: string) => {
+    const numbers = val.replace(/\D/g, '').slice(0, 11);
+    if (numbers.length <= 2) return numbers;
+    if (numbers.length <= 6) return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
+    if (numbers.length <= 10) return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 6)}-${numbers.slice(6)}`;
+    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,7 +38,13 @@ export default function LoginPage() {
 
     try {
       if (isRegister) {
-        const origin = typeof window !== 'undefined' ? window.location.origin : 'https://watsapp-saas.vercel.app';
+        if (whatsapp.replace(/\D/g, '').length < 10) {
+          setErrorMsg('Por favor, informe um número de WhatsApp válido com DDD.');
+          setLoading(false);
+          return;
+        }
+
+        const origin = typeof window !== 'undefined' ? window.location.origin : 'https://www.zapella.app';
         const { error, data } = await supabase.auth.signUp({
           email,
           password,
@@ -37,7 +52,8 @@ export default function LoginPage() {
             emailRedirectTo: `${origin}/auth/callback`,
             data: {
               full_name: fullName,
-              company_name: companyName
+              company_name: companyName,
+              whatsapp: whatsapp
             }
           }
         });
@@ -199,6 +215,21 @@ export default function LoginPage() {
                       <Building className="w-4 h-4 text-[#4D4D61] absolute left-3 top-3" />
                       <input type="text" required value={companyName} onChange={e => setCompanyName(e.target.value)}
                         placeholder="Ex: Minha Empresa" className={inputClass} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-[#171901] mb-1">WhatsApp / Celular com DDD</label>
+                    <div className="relative">
+                      <Smartphone className="w-4 h-4 text-[#4D4D61] absolute left-3 top-3" />
+                      <input
+                        type="tel"
+                        required
+                        value={whatsapp}
+                        onChange={e => setWhatsapp(formatPhone(e.target.value))}
+                        placeholder="Ex: (11) 99999-8888"
+                        className={inputClass}
+                      />
                     </div>
                   </div>
                 </>

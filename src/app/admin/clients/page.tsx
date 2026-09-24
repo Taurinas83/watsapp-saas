@@ -59,6 +59,7 @@ export default function AdminClientsPage() {
   const [editOrgName, setEditOrgName] = useState('');
   const [editOwnerName, setEditOwnerName] = useState('');
   const [editOwnerEmail, setEditOwnerEmail] = useState('');
+  const [editOwnerPhone, setEditOwnerPhone] = useState('');
   const [editPlanTier, setEditPlanTier] = useState('starter');
   const [editStatus, setEditStatus] = useState<OrganizationStatus>('trialing');
   const [editCustomMrr, setEditCustomMrr] = useState<number>(97);
@@ -123,6 +124,7 @@ export default function AdminClientsPage() {
     setEditOrgName(tenant.name);
     setEditOwnerName(tenant.ownerName !== 'Não informado' ? tenant.ownerName : '');
     setEditOwnerEmail(tenant.ownerEmail !== 'sem-email@zapella.com' ? tenant.ownerEmail : '');
+    setEditOwnerPhone(tenant.ownerPhone || '');
     setEditPlanTier(tenant.plan_tier || 'starter');
     setEditStatus((tenant.status as OrganizationStatus) || 'trialing');
     setEditCustomMrr(tenant.custom_mrr || PLAN_PRICES[tenant.plan_tier || 'starter'] || 97);
@@ -145,6 +147,7 @@ export default function AdminClientsPage() {
         profileId: selectedTenant.profileId,
         ownerName: editOwnerName,
         ownerEmail: editOwnerEmail,
+        ownerPhone: editOwnerPhone,
         planTier: editPlanTier,
         status: editStatus,
         customMrr: editCustomMrr,
@@ -348,6 +351,20 @@ export default function AdminClientsPage() {
                       <td className="py-3.5 px-5">
                         <div className="font-medium text-[#111B21]">{tenant.ownerName}</div>
                         <div className="text-[10px] text-[#667781] truncate max-w-[160px]">{tenant.ownerEmail}</div>
+                        {tenant.ownerPhone ? (
+                          <a
+                            href={`https://wa.me/55${tenant.ownerPhone.replace(/\D/g, '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#128C7E] hover:underline mt-0.5"
+                            title="Conversar no WhatsApp"
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#25D366]" />
+                            <span>{tenant.ownerPhone}</span>
+                          </a>
+                        ) : (
+                          <div className="text-[10px] text-slate-400 italic mt-0.5">Sem WhatsApp</div>
+                        )}
                       </td>
 
                       {/* Plano & MRR */}
@@ -492,10 +509,10 @@ export default function AdminClientsPage() {
                 />
               </div>
 
-              {/* Responsável e Email em 2 colunas */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Responsável, Email e WhatsApp */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block font-semibold text-[#111B21] mb-1">Nome do Responsável</label>
+                  <label className="block font-semibold text-[#111B21] mb-1">Nome</label>
                   <input
                     type="text"
                     value={editOwnerName}
@@ -506,12 +523,23 @@ export default function AdminClientsPage() {
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-[#111B21] mb-1">E-mail do Responsável</label>
+                  <label className="block font-semibold text-[#111B21] mb-1">E-mail</label>
                   <input
                     type="email"
                     value={editOwnerEmail}
                     onChange={(e) => setEditOwnerEmail(e.target.value)}
                     placeholder="cliente@empresa.com"
+                    className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-[#111B21] font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-[#111B21] mb-1">WhatsApp</label>
+                  <input
+                    type="text"
+                    value={editOwnerPhone}
+                    onChange={(e) => setEditOwnerPhone(e.target.value)}
+                    placeholder="Ex: (11) 99999-8888"
                     className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-[#111B21] font-medium"
                   />
                 </div>

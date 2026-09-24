@@ -380,6 +380,7 @@ export async function fetchAdminOverviewMetrics(): Promise<OverviewMetrics> {
 export interface TenantListItem extends Organization {
   ownerName: string;
   ownerEmail: string;
+  ownerPhone?: string | null;
   profileId?: string;
   attendantConnected: boolean;
   messagesCount: number;
@@ -398,6 +399,7 @@ export async function fetchAdminTenants(query?: string, statusFilter?: string): 
     .select(`
       id,
       name,
+      phone,
       stripe_customer_id,
       stripe_subscription_status,
       created_at,
@@ -412,6 +414,7 @@ export async function fetchAdminTenants(query?: string, statusFilter?: string): 
         id,
         full_name,
         email,
+        phone,
         role
       ),
       attendants (
@@ -503,6 +506,7 @@ export async function fetchAdminTenants(query?: string, statusFilter?: string): 
       profileId: primaryProfile?.id,
       ownerName: primaryProfile?.full_name || 'Não informado',
       ownerEmail: primaryProfile?.email || 'sem-email@zapella.com',
+      ownerPhone: primaryProfile?.phone || item.phone || null,
       attendantConnected,
       messagesCount: 0, // Enriched if needed
     };
@@ -513,7 +517,8 @@ export async function fetchAdminTenants(query?: string, statusFilter?: string): 
     return tenants.filter(t =>
       t.name.toLowerCase().includes(q) ||
       t.ownerName.toLowerCase().includes(q) ||
-      t.ownerEmail.toLowerCase().includes(q)
+      t.ownerEmail.toLowerCase().includes(q) ||
+      (t.ownerPhone && t.ownerPhone.includes(q))
     );
   }
 
@@ -526,6 +531,7 @@ export interface UpdateTenantData {
   profileId?: string;
   ownerName?: string;
   ownerEmail?: string;
+  ownerPhone?: string | null;
   planTier: string;
   status: OrganizationStatus;
   customMrr?: number;
@@ -546,6 +552,7 @@ export async function updateTenantComplete(data: UpdateTenantData): Promise<bool
       .from('organizations')
       .update({
         name: data.organizationName,
+        phone: data.ownerPhone || null,
         plan_tier: data.planTier,
         status: data.status,
         custom_mrr: mrrValue,
@@ -566,6 +573,7 @@ export async function updateTenantComplete(data: UpdateTenantData): Promise<bool
         .update({
           full_name: data.ownerName,
           email: data.ownerEmail,
+          phone: data.ownerPhone || null,
         })
         .eq('id', data.profileId);
 

@@ -39,7 +39,16 @@ export default function GeneralSettingsPage() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [companyName, setCompanyName] = useState('');
+  const [phone, setPhone] = useState('');
   const [planTier, setPlanTier] = useState('starter');
+
+  const formatPhone = (val: string) => {
+    const digits = val.replace(/\D/g, '').slice(0, 11);
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+    if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`;
+  };
 
   // Password Change State
   const [newPassword, setNewPassword] = useState('');
@@ -75,10 +84,11 @@ export default function GeneralSettingsPage() {
         const supabase = createClient();
 
         // 1. Carregar organização
-        const { data: org } = await supabase.from('organizations').select('name, plan_tier').eq('id', currentOrgId).single();
+        const { data: org } = await supabase.from('organizations').select('name, plan_tier, phone').eq('id', currentOrgId).single();
         if (org) {
           setCompanyName(org.name || '');
           setPlanTier(org.plan_tier || 'starter');
+          if (org.phone) setPhone(formatPhone(org.phone));
         }
 
         // 2. Carregar perfil vinculado a esta organização (exibe os dados do cliente real)
@@ -94,6 +104,7 @@ export default function GeneralSettingsPage() {
           setUserId(orgProfile.id);
           setEmail(orgProfile.email || '');
           setFullName(orgProfile.full_name || '');
+          if (orgProfile.phone) setPhone(formatPhone(orgProfile.phone));
         } else {
           // Fallback para o usuário logado
           const { data: { user } } = await supabase.auth.getUser();
@@ -103,6 +114,7 @@ export default function GeneralSettingsPage() {
             const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
             if (profile) {
               setFullName(profile.full_name || '');
+              if (profile.phone) setPhone(formatPhone(profile.phone));
             }
           }
         }
@@ -140,11 +152,12 @@ export default function GeneralSettingsPage() {
 
     try {
       const supabase = createClient();
+      const rawPhone = phone.replace(/\D/g, '');
       if (userId) {
-        await supabase.from('profiles').update({ full_name: fullName }).eq('id', userId);
+        await supabase.from('profiles').update({ full_name: fullName, phone: rawPhone || null }).eq('id', userId);
       }
       if (orgId) {
-        await supabase.from('organizations').update({ name: companyName }).eq('id', orgId);
+        await supabase.from('organizations').update({ name: companyName, phone: rawPhone || null }).eq('id', orgId);
       }
       setProfileSuccess(true);
       setTimeout(() => setProfileSuccess(false), 3000);
@@ -288,6 +301,22 @@ export default function GeneralSettingsPage() {
             </div>
 
             <div>
+              <label className="block text-xs font-bold text-[#171901] mb-1">WhatsApp de Contato</label>
+              <div className="relative">
+                <Smartphone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#4D4D61]" />
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(formatPhone(e.target.value))}
+                  placeholder="Ex: (11) 99999-8888"
+                  maxLength={15}
+                  className="w-full bg-[#F4F5F4] border border-[#E0E3E1] rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-[#171901] focus:outline-none focus:border-[#00E676]"
+                />
+              </div>
+              <p className="text-[10px] text-[#4D4D61] mt-1">Número para avisos do sistema e suporte direto.</p>
+            </div>
+
+            <div>
               <label className="block text-xs font-bold text-[#171901] mb-1">E-mail de Login</label>
               <input
                 type="email"
@@ -298,7 +327,7 @@ export default function GeneralSettingsPage() {
               <p className="text-[10px] text-[#4D4D61] mt-1">E-mail autenticado via Supabase Auth.</p>
             </div>
 
-            <div>
+            <div className="sm:col-span-2">
               <label className="block text-xs font-bold text-[#171901] mb-1">Plano Atual</label>
               <div className="flex items-center justify-between p-2.5 bg-[#F4F5F4] border border-[#E0E3E1] rounded-xl">
                 <span className="text-xs font-extrabold capitalize text-[#2E7D5A]">
