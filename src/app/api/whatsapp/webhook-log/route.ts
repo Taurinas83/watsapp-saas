@@ -12,11 +12,11 @@ export const revalidate = 0;
 
 // In-memory log (resets on cold start, but works for debugging on Vercel)
 // We'll use Supabase for persistent logging
-import { createClient } from '@/lib/supabase/client';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export async function GET() {
   try {
-    const supabase = createClient();
+    const supabase = createAdminClient();
     
     // Get the last 50 webhook events from messages table
     const { data: recentMessages, error } = await supabase

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/client';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { DEFAULT_ORG_ID } from '@/lib/constants';
 
 /**
@@ -45,7 +45,7 @@ export async function syncWhatsAppStatusToDb(
       ? instanceOrOrgId
       : getOrgIdFromInstance(instanceOrOrgId);
 
-    const supabase = createClient();
+    const supabase = createAdminClient();
     const { error } = await supabase.rpc('update_whatsapp_status', {
       p_org_id: orgId,
       p_status: status,

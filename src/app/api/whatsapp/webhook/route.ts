@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateBotResponse, maskPII } from '@/lib/ai-engine';
 import { fetchAttendant, fetchKnowledgeItems, insertMessage } from '@/lib/supabase/actions';
-import { createClient } from '@/lib/supabase/client';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { initialAttendant, initialKnowledgeItems } from '@/lib/mock-data';
 import { DEFAULT_ORG_ID } from '@/lib/constants';
 import { Message } from '@/types';
@@ -200,7 +200,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ status: 'ignored', reason: 'empty_messages' });
     }
 
-    const supabase = createClient();
+    const supabase = createAdminClient();
     let organizationId = DEFAULT_ORG_ID;
 
     if (instance && instance !== 'default_org') {
@@ -376,7 +376,7 @@ export async function POST(req: NextRequest) {
         // ── REGRA 9: TRATAMENTO DE ÁUDIO, IMAGEM OU DOCUMENTO ───────────────
         if (mediaType === 'audio') {
           const audioReply = 'Recebi seu áudio! No momento compreendo apenas mensagens de texto. Poderia digitar sua dúvida, por favor? 😊';
-          await insertMessage(conv.id, organizationId, 'bot', 'Assistente', audioReply);
+          await insertMessage(conv.id, organizationId, 'bot', 'Assistente', audioReply, undefined, supabase);
           const evoUrl = getCleanEvoUrl();
           const evoKey = getCleanEvoKey();
           await fetch(`${evoUrl}/message/sendText/${instance}`, {
@@ -392,7 +392,7 @@ export async function POST(req: NextRequest) {
         if (mediaType === 'image' || mediaType === 'document') {
           if (!rawText) {
             const mediaReply = 'Recebi seu arquivo com sucesso! Nossa equipe humana irá analisá-lo em breve.';
-            await insertMessage(conv.id, organizationId, 'bot', 'Assistente', mediaReply);
+            await insertMessage(conv.id, organizationId, 'bot', 'Assistente', mediaReply, undefined, supabase);
             await supabase.from('conversations').update({ status: 'waiting_human' }).eq('id', conv.id);
 
             const evoUrl = getCleanEvoUrl();
@@ -420,8 +420,8 @@ export async function POST(req: NextRequest) {
               .eq('id', organizationId)
               .single()
           ).catch(() => null),
-          fetchAttendant(organizationId).catch(() => null),
-          fetchKnowledgeItems(organizationId).catch(() => []),
+          fetchAttendant(organizationId, supabase).catch(() => null),
+          fetchKnowledgeItems(organizationId, supabase).catch(() => []),
           Promise.resolve(
             supabase
               .from('messages')
@@ -463,7 +463,9 @@ export async function POST(req: NextRequest) {
             organizationId,
             'bot',
             attendant.name,
-            'Entendido! Estou transferindo seu atendimento para nossa equipe humana agora mesmo. Por favor, aguarde um instante. 😊'
+            'Entendido! Estou transferindo seu atendimento para nossa equipe humana agora mesmo. Por favor, aguarde um instante. 😊',
+            undefined,
+            supabase
           );
           processedCount++;
           continue;
@@ -489,7 +491,9 @@ export async function POST(req: NextRequest) {
               organizationId,
               'bot',
               attendant.name,
-              'Olá! Nosso limite de atendimento automatizado deste mês foi atingido. Sua mensagem foi encaminhada para a equipe humana. Aguarde um momento!'
+              'Olá! Nosso limite de atendimento automatizado deste mês foi atingido. Sua mensagem foi encaminhada para a equipe humana. Aguarde um momento!',
+              undefined,
+              supabase
             );
             processedCount++;
             continue;
@@ -538,7 +542,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Salvar resposta da IA no banco
-        await insertMessage(conv.id, organizationId, 'bot', attendant.name, aiResult.content);
+        await insertMessage(conv.id, organizationId, 'bot', attendant.name, aiResult.content, undefined, supabase);
 
         // ── SINCRONIZAÇÃO AUTOMÁTICA COM CRM NATIVO (OPORTUNIDADE/LEAD) ────
         syncCrmLead(supabase, organizationId, conv.id, customerName, customerPhone, aiResult).catch((err) =>

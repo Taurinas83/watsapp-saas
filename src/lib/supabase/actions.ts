@@ -45,8 +45,8 @@ export async function getCurrentUserOrganizationId(): Promise<string> {
 /**
  * ATENDENTE: Buscar configurações do atendente virtual no Supabase
  */
-export async function fetchAttendant(organizationId: string): Promise<Attendant | null> {
-  const supabase = createClient();
+export async function fetchAttendant(organizationId: string, customClient?: any): Promise<Attendant | null> {
+  const supabase = customClient || createClient();
   const { data, error } = await supabase
     .from('attendants')
     .select('*')
@@ -143,8 +143,8 @@ export async function fetchMonthlyUsage(organizationId: string): Promise<{ count
 /**
  * BASE DE CONHECIMENTO: Listar todos os itens da empresa
  */
-export async function fetchKnowledgeItems(organizationId: string): Promise<KnowledgeItem[]> {
-  const supabase = createClient();
+export async function fetchKnowledgeItems(organizationId: string, customClient?: any): Promise<KnowledgeItem[]> {
+  const supabase = customClient || createClient();
   const { data, error } = await supabase
     .from('knowledge_items')
     .select('*')
@@ -248,9 +248,10 @@ export async function insertMessage(
   senderType: 'customer' | 'bot' | 'operator',
   senderName: string,
   content: string,
-  aiSuggestion?: string
+  aiSuggestion?: string,
+  customClient?: any
 ): Promise<Message | null> {
-  const supabase = createClient();
+  const supabase = customClient || createClient();
 
   // Inserir mensagem
   const { data: msgData, error: msgError } = await supabase

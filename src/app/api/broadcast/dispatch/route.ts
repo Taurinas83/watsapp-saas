@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/client';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 const rawUrl = process.env.EVOLUTION_API_URL || 'https://evolution-api-production-5589.up.railway.app';
 const EVOLUTION_URL = rawUrl.trim().replace(/\/+$/, '');
@@ -11,7 +11,7 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = createClient();
+    const supabase = createAdminClient();
 
     // Buscar mensagens pendentes que já passaram do horário agendado
     const now = new Date().toISOString();
