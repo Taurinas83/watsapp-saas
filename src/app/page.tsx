@@ -1036,27 +1036,82 @@ export default function LandingPage() {
       </section>
 
       {/* ── Footer ── */}
-      <footer className="border-t border-[#E0E3E1] py-12 px-6 lg:px-14" style={{ background: '#F4F5F4' }}>
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-[#4D4D61]">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 shadow-sm"
-                 style={{ background: 'linear-gradient(135deg, #00E676 0%, #7C4DFF 100%)' }}>
-              <Image src="/zapella-icon.png" alt="Zapella" width={32} height={32} className="w-full h-full object-cover" />
+      <footer className="border-t border-[#E0E3E1] py-14 px-6 lg:px-14" style={{ background: '#F4F5F4' }}>
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8 mb-10 text-xs">
+          <div className="md:col-span-1">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 shadow-sm"
+                   style={{ background: 'linear-gradient(135deg, #00E676 0%, #7C4DFF 100%)' }}>
+                <Image src="/zapella-icon.png" alt="Zapella" width={32} height={32} className="w-full h-full object-cover" />
+              </div>
+              <span className="font-extrabold text-[#171901] text-sm">Zapella</span>
             </div>
-            <span className="font-extrabold text-[#171901]">Zapella</span>
+            <p className="text-[#4D4D61] leading-relaxed">
+              A secretária virtual inteligente com IA conversacional humanizada, CRM Kanban e proteção antiban para WhatsApp.
+            </p>
           </div>
+
+          <div>
+            <h4 className="font-bold text-[#171901] mb-3 uppercase tracking-wider text-[11px]">Soluções por Nicho</h4>
+            <ul className="space-y-2 text-[#4D4D61]">
+              <li>
+                <Link href="/solucoes/clinicas-e-consultorios" className="hover:text-[#2E7D5A] transition-colors">
+                  Clínicas & Consultórios
+                </Link>
+              </li>
+              <li>
+                <Link href="/solucoes/imobiliarias-e-corretores" className="hover:text-[#2E7D5A] transition-colors">
+                  Imobiliárias & Corretores
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="font-bold text-[#171901] mb-3 uppercase tracking-wider text-[11px]">Comparativos & Conceitos</h4>
+            <ul className="space-y-2 text-[#4D4D61]">
+              <li>
+                <Link href="/comparativo/zapella-vs-chatbots-tradicionais" className="hover:text-[#2E7D5A] transition-colors">
+                  Zapella vs Chatbots de Botão
+                </Link>
+              </li>
+              <li>
+                <Link href="/glossario" className="hover:text-[#2E7D5A] transition-colors">
+                  Glossário de IA & Automação
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="font-bold text-[#171901] mb-3 uppercase tracking-wider text-[11px]">Legal & Suporte</h4>
+            <ul className="space-y-2 text-[#4D4D61]">
+              <li>
+                <Link href="/termos" className="hover:text-[#2E7D5A] transition-colors">
+                  Termos de Uso
+                </Link>
+              </li>
+              <li>
+                <Link href="/privacidade" className="hover:text-[#2E7D5A] transition-colors">
+                  Privacidade & LGPD
+                </Link>
+              </li>
+              <li>
+                <button
+                  onClick={() => setIsSupportOpen(true)}
+                  className="hover:text-[#2E7D5A] transition-colors font-bold text-[#2E7D5A] flex items-center gap-1.5"
+                >
+                  <span>Central de Suporte</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#00E676]" />
+                </button>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto pt-6 border-t border-[#E0E3E1]/70 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#70727B]">
           <p>© 2026 Zapella. Todos os direitos reservados.</p>
-          <div className="flex items-center gap-6">
-            <Link href="/termos" className="hover:text-[#171901] transition-colors">Termos de Uso</Link>
-            <Link href="/privacidade" className="hover:text-[#171901] transition-colors">Privacidade</Link>
-            <button
-              onClick={() => setIsSupportOpen(true)}
-              className="hover:text-[#171901] transition-colors font-bold text-[#2E7D5A] flex items-center gap-1.5"
-            >
-              <span>Suporte</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-[#00E676]" />
-            </button>
-          </div>
+          <p>Feito para empresas que não aceitam perder clientes no WhatsApp.</p>
         </div>
       </footer>
 
