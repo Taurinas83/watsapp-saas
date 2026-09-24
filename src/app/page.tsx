@@ -1068,7 +1068,7 @@ export default function LandingPage() {
           </div>
 
           <div>
-            <h4 className="font-bold text-[#171901] mb-3 uppercase tracking-wider text-[11px]">Comparativos & Conceitos</h4>
+            <h4 className="font-bold text-[#171901] mb-3 uppercase tracking-wider text-[11px]">Comparativos & Engenharia</h4>
             <ul className="space-y-2 text-[#4D4D61]">
               <li>
                 <Link href="/comparativo/zapella-vs-chatbots-tradicionais" className="hover:text-[#2E7D5A] transition-colors">
@@ -1078,6 +1078,16 @@ export default function LandingPage() {
               <li>
                 <Link href="/glossario" className="hover:text-[#2E7D5A] transition-colors">
                   Glossário de IA & Automação
+                </Link>
+              </li>
+              <li>
+                <Link href="/tecnologia/arquitetura-e-seguranca" className="hover:text-[#2E7D5A] transition-colors">
+                  Arquitetura & Segurança (Whitepaper)
+                </Link>
+              </li>
+              <li>
+                <Link href="/relatorio-atendimento-2026" className="hover:text-[#2E7D5A] transition-colors">
+                  Relatório de Atendimento 2026
                 </Link>
               </li>
             </ul>
