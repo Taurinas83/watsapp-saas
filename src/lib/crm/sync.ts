@@ -10,7 +10,24 @@ export async function syncCrmLead(
   aiResult?: BotResponseResult
 ) {
   try {
-    // 1. Buscar se já existe lead para este telefone na organização
+    // 1. Executa a procedure segura (SECURITY DEFINER) no Postgres
+    // Garante atomicidade, velocidade (1 round trip) e contorna bloqueios de RLS no webhook
+    const { error: rpcError } = await supabase.rpc('sync_crm_lead_rpc', {
+      p_org_id: organizationId,
+      p_conversation_id: conversationId,
+      p_customer_name: customerName || '',
+      p_customer_phone: customerPhone,
+      p_ai_content: aiResult?.content || '',
+      p_should_handover: aiResult?.shouldHandover || false,
+    });
+
+    if (!rpcError) {
+      return;
+    }
+
+    console.warn('[CRM Sync] RPC fallback para queries diretas:', rpcError);
+
+    // Fallback: caso a RPC não esteja disponível por qualquer motivo
     const { data: existingLead } = await supabase
       .from('crm_leads')
       .select('id, stage_id, notes, tags')
@@ -18,7 +35,6 @@ export async function syncCrmLead(
       .eq('contact_phone', customerPhone)
       .maybeSingle();
 
-    // 2. Buscar etapas da organização
     const { data: stages } = await supabase
       .from('crm_stages')
       .select('id, name, order_index')
@@ -32,7 +48,6 @@ export async function syncCrmLead(
     const humanStage = stages.find((s) => s.name.toLowerCase().includes('humano')) || stages[0];
     const scheduledStage = stages.find((s) => s.name.toLowerCase().includes('agendad')) || stages[0];
 
-    // Se o lead não existe, cadastrar na primeira etapa
     if (!existingLead) {
       const initialStageId = aiResult?.shouldHandover ? humanStage.id : qualifyingStage.id;
 
@@ -49,7 +64,6 @@ export async function syncCrmLead(
       return;
     }
 
-    // Se o lead já existe, atualizar conforme a evolução do atendimento
     const updates: Record<string, any> = {
       conversation_id: conversationId,
       updated_at: new Date().toISOString(),
@@ -59,12 +73,10 @@ export async function syncCrmLead(
       updates.contact_name = customerName;
     }
 
-    // Se a IA disparou transbordo humano, mover para Atendimento Humano
     if (aiResult?.shouldHandover && humanStage) {
       updates.stage_id = humanStage.id;
     }
 
-    // Se a mensagem enviou link de agendamento, mover para Agendados
     if (
       aiResult?.content &&
       (aiResult.content.includes('calendly.com') ||

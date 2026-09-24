@@ -5,30 +5,30 @@ import { Attendant, KnowledgeItem, Conversation, Message, KnowledgeCategory, Con
  * USUÁRIO: Obter o ID da organização do usuário atualmente autenticado
  */
 export async function getCurrentUserOrganizationId(): Promise<string> {
-  // 1. Verificar se o Super Admin está impersonando uma organização no navegador
-  if (typeof window !== 'undefined') {
-    const impersonated = localStorage.getItem('zapella_impersonate_org');
-    if (impersonated) {
-      try {
-        const parsed = JSON.parse(impersonated);
-        if (parsed?.id) {
-          return parsed.id;
-        }
-      } catch (e) {
-        console.error('Invalid impersonation json', e);
-      }
-    }
-  }
-
   const supabase = createClient();
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('organization_id')
+        .select('organization_id, is_super_admin')
         .eq('id', user.id)
         .single();
+
+      // SEGURANÇA: Apenas Super Admin devidamente autenticado pode usar impersonate de organização
+      if (profile?.is_super_admin && typeof window !== 'undefined') {
+        const impersonated = localStorage.getItem('zapella_impersonate_org');
+        if (impersonated) {
+          try {
+            const parsed = JSON.parse(impersonated);
+            if (parsed?.id) {
+              return parsed.id;
+            }
+          } catch (e) {
+            console.error('Invalid impersonation json', e);
+          }
+        }
+      }
 
       if (profile?.organization_id) {
         return profile.organization_id;
