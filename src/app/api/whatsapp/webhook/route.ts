@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateBotResponse, maskPII } from '@/lib/ai-engine';
-import { fetchAttendant, fetchKnowledgeItems, insertMessage } from '@/lib/supabase/actions';
+import { fetchAttendant, fetchAttendants, fetchKnowledgeItems, insertMessage } from '@/lib/supabase/actions';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { initialAttendant, initialKnowledgeItems } from '@/lib/mock-data';
 import { DEFAULT_ORG_ID } from '@/lib/constants';
@@ -56,6 +56,7 @@ function isMessageTooOld(msgTimestamp: number | undefined): boolean {
 interface ExtractedContent {
   text: string | null;
   mediaType: 'text' | 'audio' | 'image' | 'document' | 'other';
+  audioUrl: string | null;
 }
 
 function extractMessageContent(data: any, payload: any): ExtractedContent {
@@ -63,19 +64,27 @@ function extractMessageContent(data: any, payload: any): ExtractedContent {
 
   // Áudio
   if (msgObj?.audioMessage) {
-    return { text: null, mediaType: 'audio' };
+    // Evolution API pode expor a URL do mídia diretamente
+    const audioUrl =
+      msgObj.audioMessage.url ||
+      msgObj.audioMessage.directPath ||
+      data?.mediaUrl ||
+      data?.audio_url ||
+      payload?.mediaUrl ||
+      null;
+    return { text: null, mediaType: 'audio', audioUrl };
   }
 
   // Imagem
   if (msgObj?.imageMessage) {
     const caption = msgObj.imageMessage.caption;
-    return { text: caption || null, mediaType: 'image' };
+    return { text: caption || null, mediaType: 'image', audioUrl: null };
   }
 
   // Documento
   if (msgObj?.documentMessage) {
     const caption = msgObj.documentMessage.caption;
-    return { text: caption || null, mediaType: 'document' };
+    return { text: caption || null, mediaType: 'document', audioUrl: null };
   }
 
   // Texto Padrão
@@ -92,8 +101,9 @@ function extractMessageContent(data: any, payload: any): ExtractedContent {
     data?.text ||
     null;
 
-  return { text: text ? text.trim() : null, mediaType: 'text' };
+  return { text: text ? text.trim() : null, mediaType: 'text', audioUrl: null };
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // REGRA 8 (EXTRA): INDICADOR DE DIGITAÇÃO NA EVOLUTION API
@@ -264,7 +274,7 @@ export async function POST(req: NextRequest) {
         // ── EXTRAÇÃO E CLASSIFICAÇÃO DE MÍDIA (REGRA 9) ──────────────────────
         const customerPhone = remoteJid.split('@')[0].replace(/\D/g, '') || null;
         const customerName = data?.pushName || payload?.pushName || 'Cliente WhatsApp';
-        const { text: rawText, mediaType } = extractMessageContent(data, payload);
+        const { text: rawText, mediaType, audioUrl } = extractMessageContent(data, payload);
 
         if (!customerPhone) {
           skippedCount++;
@@ -303,10 +313,8 @@ export async function POST(req: NextRequest) {
 
         if (conv) {
           if (conv.status === 'human_active' || conv.status === 'waiting_human') {
-            // Humano no controle — registrar mensagem, mas NÃO responder com IA
             shouldBotRespond = false;
           } else if (conv.status === 'closed') {
-            // REGRA 6: Reengajamento com Cooldown
             const lastContact = conv.last_message_at ? new Date(conv.last_message_at).getTime() : 0;
             const hoursSinceClosed = (Date.now() - lastContact) / (1000 * 60 * 60);
 
@@ -322,7 +330,6 @@ export async function POST(req: NextRequest) {
             }
           }
 
-          // Atualizar último registro da conversa
           await supabase
             .from('conversations')
             .update({
@@ -333,7 +340,6 @@ export async function POST(req: NextRequest) {
             })
             .eq('id', conv.id);
         } else {
-          // Nova conversa
           const { data: newConv } = await supabase
             .from('conversations')
             .insert({
@@ -352,30 +358,60 @@ export async function POST(req: NextRequest) {
 
         if (!conv) continue;
 
-        // ── REGRA 14: MASCARAMENTO DE DADOS SENSÍVEIS (PII) ──────────────────
-        const effectiveUserText = rawText || `[Enviou ${mediaType}]`;
-        const { sanitized: sanitizedUserText } = maskPII(effectiveUserText);
+        // ── STT: TRANSCRIÇÃO DE ÁUDIO VIA GROQ WHISPER ───────────────────────
+        let effectiveText = rawText;
+        let transcriptionDone = false;
 
-        // Salvar mensagem do cliente no banco
+        if (mediaType === 'audio' && audioUrl && shouldBotRespond) {
+          try {
+            const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.zapella.app';
+            const sttRes = await fetch(`${baseUrl}/api/transcribe-audio`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-internal-secret': process.env.INTERNAL_API_SECRET || 'zapella_internal_2024',
+              },
+              body: JSON.stringify({ audioUrl }),
+              signal: AbortSignal.timeout(25000),
+            });
+
+            if (sttRes.ok) {
+              const sttData = await sttRes.json();
+              if (sttData?.transcript && sttData.transcript.length > 2) {
+                effectiveText = `[🎙️ Áudio transcrito]: ${sttData.transcript}`;
+                transcriptionDone = true;
+              }
+            }
+          } catch (sttErr: any) {
+            console.error('[STT] Falha na transcrição:', sttErr.message);
+          }
+        }
+
+        // ── REGRA 14: MASCARAMENTO DE DADOS SENSÍVEIS (PII) ──────────────────
+        const displayText = effectiveText || `[Enviou ${mediaType}]`;
+        const { sanitized: sanitizedUserText } = maskPII(displayText);
+
+        // Salvar mensagem do cliente no banco (com audio_url se aplicável)
         await supabase.from('messages').insert({
           conversation_id: conv.id,
           organization_id: organizationId,
           sender_type: 'customer',
           sender_name: customerName,
           content: sanitizedUserText,
+          audio_url: mediaType === 'audio' ? (audioUrl || null) : null,
+          content_type: mediaType,
           whatsapp_message_id: whatsappMessageId,
           created_at: new Date().toISOString(),
         });
 
-        // Se conversa for gerenciada por humano ou fechada recentemente, encerra aqui
         if (!shouldBotRespond) {
           processedCount++;
           continue;
         }
 
-        // ── REGRA 9: TRATAMENTO DE ÁUDIO, IMAGEM OU DOCUMENTO ───────────────
-        if (mediaType === 'audio') {
-          const audioReply = 'Recebi seu áudio! No momento compreendo apenas mensagens de texto. Poderia digitar sua dúvida, por favor? 😊';
+        // ── ÁUDIO SEM STT: Pedir que o cliente escreva ───────────────────────
+        if (mediaType === 'audio' && !transcriptionDone) {
+          const audioReply = 'Recebi seu áudio! No momento estou com dificuldade para processar áudios. Poderia digitar sua dúvida, por favor? 😊';
           await insertMessage(conv.id, organizationId, 'bot', 'Assistente', audioReply, undefined, supabase);
           const evoUrl = getCleanEvoUrl();
           const evoKey = getCleanEvoKey();
@@ -412,15 +448,15 @@ export async function POST(req: NextRequest) {
         sendTypingIndicator(instance, customerPhone);
 
         // ── CONFIGURAÇÕES DA ORGANIZAÇÃO (REGRA 16: ISOLAMENTO MULTI-TENANT) ─
-        const [orgData, attendantData, knowledgeItemsData, conversationHistoryData] = await Promise.all([
+        const [orgData, allAttendantsData, knowledgeItemsData, conversationHistoryData] = await Promise.all([
           Promise.resolve(
             supabase
               .from('organizations')
-              .select('plan_tier, ai_model_preference')
+              .select('plan_tier, ai_model_preference, enable_initial_menu, enable_auto_routing')
               .eq('id', organizationId)
               .single()
           ).catch(() => null),
-          fetchAttendant(organizationId, supabase).catch(() => null),
+          fetchAttendants(organizationId, supabase).catch(() => []),
           fetchKnowledgeItems(organizationId, supabase).catch(() => []),
           Promise.resolve(
             supabase
@@ -435,11 +471,31 @@ export async function POST(req: NextRequest) {
         const org = orgData?.data;
         const modelPreference = (org?.ai_model_preference as any) || 'auto';
 
-        const attendant = attendantData || initialAttendant;
+        // ── SELEÇÃO DO ATENDENTE (MULTI-AGENTE) ──────────────────────────────
+        // Prioridade: 1) atendente já atribuído à conversa, 2) único, 3) fallback
+        let attendant = initialAttendant;
+        const activeAttendants = allAttendantsData.length > 0 ? allAttendantsData : [];
+
+        if (activeAttendants.length > 0) {
+          // Se a conversa já tem um atendente atribuído, usar ele
+          if (conv.attendant_id) {
+            const assigned = activeAttendants.find((a: any) => a.id === conv.attendant_id);
+            attendant = assigned || activeAttendants[0];
+          } else {
+            // Atribuir automaticamente o primeiro atendente ativo e salvar na conversa
+            attendant = activeAttendants[0];
+            await supabase
+              .from('conversations')
+              .update({ attendant_id: attendant.id })
+              .eq('id', conv.id);
+          }
+        }
+
         const knowledgeItems = knowledgeItemsData && knowledgeItemsData.length > 0
           ? knowledgeItemsData
           : initialKnowledgeItems;
         const history: Message[] = (conversationHistoryData?.data as Message[]) || [];
+
 
         // ── REGRA NOVA: PAUSA GLOBAL DO BOT ──────────────────────────────
         if (attendant.is_paused === true) {
@@ -556,7 +612,7 @@ export async function POST(req: NextRequest) {
           conversation_id: conv.id,
           customer_phone: customerPhone,
           whatsapp_message_id: whatsappMessageId,
-          user_input: effectiveUserText,
+          user_input: displayText,
           sanitized_input: sanitizedUserText,
           prompt_sent: aiResult.promptSent,
           rag_items_used: aiResult.ragItemsUsed,

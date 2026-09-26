@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
-import { Clock, Bell, Save, Check, Mail, Smartphone, Loader2, User, Building2, ShieldCheck, Lock, KeyRound } from 'lucide-react';
-import { getCurrentUserOrganizationId, fetchOrganizationSettings, updateOrganizationSettings } from '@/lib/supabase/actions';
+import { Clock, Bell, Save, Check, Mail, Smartphone, Loader2, User, Building2, ShieldCheck, Lock, KeyRound, Zap, Bot } from 'lucide-react';
+import { getCurrentUserOrganizationId, fetchOrganizationSettings, updateOrganizationSettings, fetchRoutingSettings, updateRoutingSettings } from '@/lib/supabase/actions';
 import { createClient } from '@/lib/supabase/client';
 import { DEFAULT_ORG_ID } from '@/lib/constants';
 
@@ -66,6 +66,12 @@ export default function GeneralSettingsPage() {
 
   const [notifyHandoverEmail, setNotifyHandoverEmail] = useState(true);
   const [notifyHandoverWhatsApp, setNotifyHandoverWhatsApp] = useState(true);
+
+  // Routing State
+  const [enableInitialMenu, setEnableInitialMenu] = useState(true);
+  const [enableAutoRouting, setEnableAutoRouting] = useState(false);
+  const [isSavingRouting, setIsSavingRouting] = useState(false);
+  const [routingSuccess, setRoutingSuccess] = useState(false);
 
   // Carregar configurações reais do Supabase
   useEffect(() => {
@@ -135,6 +141,12 @@ export default function GeneralSettingsPage() {
             setNotifyHandoverWhatsApp(data.notifyHandoverWhatsApp);
           }
         }
+
+        // 4. Carregar configurações de roteamento
+        const routing = await fetchRoutingSettings(currentOrgId);
+        setEnableInitialMenu(routing.enableInitialMenu);
+        setEnableAutoRouting(routing.enableAutoRouting);
+
       } catch (err: any) {
         console.error('Erro ao carregar configurações:', err);
       } finally {
@@ -202,6 +214,14 @@ export default function GeneralSettingsPage() {
     } finally {
       setIsUpdatingPassword(false);
     }
+  };
+
+  const handleSaveRouting = async () => {
+    setIsSavingRouting(true);
+    await updateRoutingSettings(orgId, { enableInitialMenu, enableAutoRouting });
+    setRoutingSuccess(true);
+    setTimeout(() => setRoutingSuccess(false), 3000);
+    setIsSavingRouting(false);
   };
 
   // Salvar no Supabase
@@ -576,6 +596,82 @@ export default function GeneralSettingsPage() {
             </div>
 
           </form>
+          </div>
+        )}
+
+        {/* ── SEÇÃO DE ROTEAMENTO ─────────────────────────────────────────── */}
+        {!isLoading && (
+          <div className="bg-white p-6 rounded-2xl border border-[#E0E3E1] shadow-sm space-y-4">
+            <div className="flex items-center gap-2 text-[#171901] font-bold text-sm pb-3 border-b border-[#E0E3E1]">
+              <Zap className="w-4 h-4" style={{ color: '#00E676' }} />
+              <span>Roteamento de Atendimento</span>
+            </div>
+
+            <p className="text-xs text-[#4D4D61]">
+              Quando você tem múltiplos atendentes virtuais, configure como novos clientes são direcionados ao setor correto.
+            </p>
+
+            {routingSuccess && (
+              <div className="flex items-center gap-2 text-xs font-semibold text-[#2E7D5A] bg-[#F4F5F4] border border-[#00E676] px-3 py-2 rounded-xl">
+                <Check className="w-4 h-4 text-[#00E676]" />
+                Configurações de roteamento salvas!
+              </div>
+            )}
+
+            <div className="space-y-4">
+              {/* Toggle: Menu Inicial */}
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-[#171901]">🗂️ Menu Inicial para Novos Clientes</p>
+                  <p className="text-[10px] text-[#4D4D61]">
+                    Quando um novo cliente entrar em contato, o bot envia um menu numerado com os setores disponíveis para ele escolher.
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={enableInitialMenu}
+                    onChange={e => setEnableInitialMenu(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00E676]" />
+                </label>
+              </div>
+
+              {/* Toggle: Auto-routing por IA */}
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-[#171901]">🤖 Roteamento Automático por IA</p>
+                  <p className="text-[10px] text-[#4D4D61]">
+                    A IA analisa a primeira mensagem do cliente e detecta a intenção (compra, suporte, financeiro, etc.) para direcioná-lo automaticamente, sem precisar de menu.
+                  </p>
+                  {enableAutoRouting && (
+                    <p className="text-[10px] text-amber-600 font-medium">⚡ Se ativo junto com o Menu Inicial, o menu tem prioridade.</p>
+                  )}
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={enableAutoRouting}
+                    onChange={e => setEnableAutoRouting(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00E676]" />
+                </label>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={handleSaveRouting}
+                disabled={isSavingRouting}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-[#171901] shadow-sm"
+                style={{ background: 'linear-gradient(135deg, #00E676 0%, #1DE9B6 100%)' }}
+              >
+                {isSavingRouting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Salvar Roteamento
+              </button>
+            </div>
           </div>
         )}
 

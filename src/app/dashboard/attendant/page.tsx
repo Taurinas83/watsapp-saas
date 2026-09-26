@@ -2,393 +2,276 @@
 
 import React, { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
-import { initialAttendant } from '@/lib/mock-data';
-import { Attendant, PersonalityType } from '@/types';
-import { buildSystemPrompt } from '@/lib/ai-engine';
-import { fetchAttendant, updateAttendant, getCurrentUserOrganizationId } from '@/lib/supabase/actions';
-import { DEFAULT_ORG_ID } from '@/lib/constants';
-import { Bot, Sparkles, Smile, ShieldCheck, Coffee, Check, Save, Info, Terminal, RefreshCw, Calendar, Users } from 'lucide-react';
+import { Attendant } from '@/types';
+import {
+  Bot, Plus, Pencil, Trash2, ToggleLeft, ToggleRight,
+  MessageCircle, Loader2, ShieldCheck, Smile, Coffee, Zap
+} from 'lucide-react';
+import {
+  fetchAttendants,
+  updateAttendant,
+  deleteAttendant,
+  getCurrentUserOrganizationId,
+  createAttendant,
+} from '@/lib/supabase/actions';
+import Link from 'next/link';
 
-export default function AttendantConfigPage() {
-  const [attendant, setAttendant] = useState<Attendant>(initialAttendant);
-  const [orgId, setOrgId] = useState<string>(DEFAULT_ORG_ID);
+const personalityLabel: Record<string, string> = {
+  friendly: 'Amigável',
+  professional: 'Profissional',
+  casual: 'Descontraído',
+};
+
+const personalityIcon: Record<string, React.ElementType> = {
+  friendly: Smile,
+  professional: ShieldCheck,
+  casual: Coffee,
+};
+
+const personalityColor: Record<string, string> = {
+  friendly: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  professional: 'bg-blue-50 text-blue-700 border-blue-200',
+  casual: 'bg-amber-50 text-amber-700 border-amber-200',
+};
+
+export default function AttendantsListPage() {
+  const [orgId, setOrgId] = useState('');
+  const [attendants, setAttendants] = useState<Attendant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [savedSuccess, setSavedSuccess] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+
+  const [newName, setNewName] = useState('');
+  const [newDept, setNewDept] = useState('');
+  const [newPersonality, setNewPersonality] = useState<'friendly' | 'professional' | 'casual'>('professional');
+  const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
     async function load() {
-      const currentOrgId = await getCurrentUserOrganizationId();
-      setOrgId(currentOrgId);
-      const data = await fetchAttendant(currentOrgId);
-      if (data) {
-        setAttendant(data);
-      } else {
-        setAttendant(prev => ({ ...prev, organization_id: currentOrgId }));
-      }
+      const id = await getCurrentUserOrganizationId();
+      setOrgId(id);
+      const data = await fetchAttendants(id);
+      setAttendants(data);
       setIsLoading(false);
     }
     load();
   }, []);
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSaving(true);
-    await updateAttendant({ ...attendant, organization_id: orgId });
-    setIsSaving(false);
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 3000);
+    if (!newName.trim() || !newDept.trim()) return;
+    setIsCreating(true);
+    const created = await createAttendant(orgId, {
+      name: newName.trim(),
+      department: newDept.trim(),
+      personality: newPersonality,
+    });
+    if (created) {
+      setAttendants(prev => [...prev, created]);
+      setNewName('');
+      setNewDept('');
+      setNewPersonality('professional');
+      setShowCreateModal(false);
+    }
+    setIsCreating(false);
   };
 
-  const [newKeyword, setNewKeyword] = useState('');
-
-  const handleAddKeyword = () => {
-    const trimmed = newKeyword.trim();
-    if (!trimmed) return;
-    const current = attendant.handover_keywords || [];
-    if (!current.includes(trimmed)) {
-      setAttendant({ ...attendant, handover_keywords: [...current, trimmed] });
-    }
-    setNewKeyword('');
+  const handleDelete = async (id: string) => {
+    if (!confirm('Deseja remover este atendente? As conversas existentes não serão afetadas.')) return;
+    setDeletingId(id);
+    const ok = await deleteAttendant(id);
+    if (ok) setAttendants(prev => prev.filter(a => a.id !== id));
+    setDeletingId(null);
   };
 
-  const generatedPrompt = buildSystemPrompt(attendant, []);
-
-
-  const personalities: { id: PersonalityType; title: string; desc: string; icon: any }[] = [
-    {
-      id: 'friendly',
-      title: 'Amigável & Caloroso',
-      desc: 'Usará emojis, tom empático, acolhedor e muito simpático.',
-      icon: Smile
-    },
-    {
-      id: 'professional',
-      title: 'Profissional & Elegante',
-      desc: 'Comunicação objetiva, culta, direta e extremamente formal.',
-      icon: ShieldCheck
-    },
-    {
-      id: 'casual',
-      title: 'Descontraído & Leve',
-      desc: 'Tom informal, moderno, leve e conversacional sem rigidez.',
-      icon: Coffee
-    }
-  ];
+  const handleToggleActive = async (att: Attendant) => {
+    setTogglingId(att.id);
+    await updateAttendant({ id: att.id, organization_id: att.organization_id, is_active: !att.is_active });
+    setAttendants(prev => prev.map(a => a.id === att.id ? { ...a, is_active: !a.is_active } : a));
+    setTogglingId(null);
+  };
 
   return (
-    <div>
+    <div className="font-sans">
       <Header
-        title="Identidade do Atendente Virtual"
-        subtitle="Configure o nome, personalidade e conduta da sua IA que atenderá via WhatsApp"
+        title="Atendentes Virtuais"
+        subtitle="Gerencie seus agentes de IA por setor — cada um com personalidade e roteamento próprios"
       />
 
-      <div className="p-6 max-w-6xl mx-auto space-y-6">
+      <div className="p-6 max-w-5xl mx-auto space-y-6">
 
-        {/* Top Notification Banner */}
-        {savedSuccess && (
-          <div className="bg-[#00E676]/10 border border-[#00E676]/30 text-[#2E7D5A] px-4 py-3 rounded-xl flex items-center justify-between animate-in fade-in-50 duration-150">
-            <div className="flex items-center gap-2 text-xs font-semibold">
-              <Check className="w-4 h-4 text-[#2E7D5A]" />
-              <span>Configurações da Identidade salvas com sucesso! O prompt dinâmico foi atualizado.</span>
+        {/* Barra de ação */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-xs text-[#4D4D61]">
+            <Bot className="w-4 h-4" style={{ color: '#00E676' }} />
+            <span><strong>{attendants.length}</strong> atendente{attendants.length !== 1 ? 's' : ''} ativo{attendants.length !== 1 ? 's' : ''}</span>
+          </div>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-[#171901] shadow-sm transition-all hover:opacity-90"
+            style={{ background: 'linear-gradient(135deg, #00E676 0%, #1DE9B6 100%)' }}
+          >
+            <Plus className="w-4 h-4" />
+            Novo Atendente
+          </button>
+        </div>
+
+        {/* Loading */}
+        {isLoading ? (
+          <div className="bg-white p-12 rounded-2xl border border-[#E0E3E1] text-center space-y-3">
+            <Loader2 className="w-6 h-6 animate-spin mx-auto" style={{ color: '#00E676' }} />
+            <p className="text-xs text-[#4D4D61]">Carregando atendentes...</p>
+          </div>
+        ) : attendants.length === 0 ? (
+          <div className="bg-white p-16 rounded-2xl border border-[#E0E3E1] text-center space-y-4">
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto" style={{ background: 'linear-gradient(135deg, #00E676 0%, #1DE9B6 100%)' }}>
+              <Bot className="w-8 h-8 text-white" />
             </div>
+            <div>
+              <p className="font-bold text-[#171901] text-sm">Nenhum atendente virtual criado</p>
+              <p className="text-xs text-[#4D4D61] mt-1">Crie seu primeiro agente de IA para começar a atender no WhatsApp.</p>
+            </div>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="px-6 py-3 rounded-xl text-sm font-bold text-[#171901] shadow-sm"
+              style={{ background: 'linear-gradient(135deg, #00E676 0%, #1DE9B6 100%)' }}
+            >
+              Criar Primeiro Atendente
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {attendants.map(att => {
+              const Icon = personalityIcon[att.personality] || Bot;
+              return (
+                <div
+                  key={att.id}
+                  className={`bg-white rounded-2xl border p-5 space-y-4 transition-all ${att.is_active ? 'border-[#E0E3E1] shadow-sm' : 'border-[#E0E3E1] opacity-60'}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #00E676 0%, #1DE9B6 100%)' }}>
+                        <Icon className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-[#171901] text-sm">{att.name}</p>
+                        <p className="text-xs text-[#4D4D61]">{att.department}</p>
+                      </div>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${personalityColor[att.personality]}`}>
+                      {personalityLabel[att.personality] || att.personality}
+                    </span>
+                  </div>
+
+                  {att.routing_keywords && att.routing_keywords.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {att.routing_keywords.slice(0, 5).map(kw => (
+                        <span key={kw} className="px-2 py-0.5 rounded-full bg-blue-50 text-[10px] text-blue-700 font-medium border border-blue-200">
+                          {kw}
+                        </span>
+                      ))}
+                      {att.routing_keywords.length > 5 && (
+                        <span className="px-2 py-0.5 rounded-full bg-[#F4F5F4] text-[10px] text-[#4D4D61]">+{att.routing_keywords.length - 5}</span>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between pt-2 border-t border-[#E0E3E1]">
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/dashboard/attendant/${att.id}`}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#F4F5F4] hover:bg-[#E0E3E1] text-xs font-semibold text-[#171901] transition-all"
+                      >
+                        <Pencil className="w-3 h-3" />
+                        Configurar
+                      </Link>
+                      <button
+                        onClick={() => handleDelete(att.id)}
+                        disabled={deletingId === att.id}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-xs font-semibold text-rose-600 transition-all"
+                      >
+                        {deletingId === att.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                        Remover
+                      </button>
+                    </div>
+                    <button
+                      onClick={() => handleToggleActive(att)}
+                      disabled={togglingId === att.id}
+                      className="flex items-center gap-1.5 text-xs font-semibold transition-all"
+                      style={{ color: att.is_active ? '#00E676' : '#9CA3AF' }}
+                    >
+                      {togglingId === att.id
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : att.is_active
+                          ? <ToggleRight className="w-5 h-5" />
+                          : <ToggleLeft className="w-5 h-5" />}
+                      {att.is_active ? 'Ativo' : 'Inativo'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-          {/* Form Configuration Column */}
-          <form onSubmit={handleSave} className="lg:col-span-7 space-y-6">
-
-            {/* Basic Identity Card */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-              <div className="flex items-center gap-2 text-slate-900 font-semibold text-sm pb-3 border-b border-slate-100">
-                <Bot className="w-4 h-4 text-[#2E7D5A]" />
-                <span>Dados do Atendente</span>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Nome do Atendente Virtual</label>
-                <input
-                  type="text"
-                  value={attendant.name}
-                  onChange={(e) => setAttendant({ ...attendant, name: e.target.value })}
-                  placeholder="Ex: Zapella, Lucas, Assistente Virtual"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#00E676] font-medium"
-                />
-                <p className="text-[11px] text-slate-400 mt-1">Este é o nome com o qual a IA se apresentará para os clientes.</p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-2">Personalidade</label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {personalities.map((p) => {
-                    const Icon = p.icon;
-                    const isSelected = attendant.personality === p.id;
-                    return (
-                      <button
-                        type="button"
-                        key={p.id}
-                        onClick={() => setAttendant({ ...attendant, personality: p.id })}
-                        className={`p-3 rounded-xl border text-left transition-all ${
-                          isSelected
-                            ? 'bg-[#00E676]/10 border-[#00E676] text-emerald-950 shadow-sm ring-1 ring-[#00E676]/30'
-                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <Icon className={`w-4 h-4 ${isSelected ? 'text-[#2E7D5A]' : 'text-slate-400'}`} />
-                          {isSelected && <Check className="w-3.5 h-3.5 text-[#2E7D5A]" />}
-                        </div>
-                        <p className="text-xs font-semibold leading-snug">{p.title}</p>
-                        <p className="text-[10px] text-slate-500 mt-1 leading-normal">{p.desc}</p>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Tom de Voz Detalhado</label>
-                <input
-                  type="text"
-                  value={attendant.voice_tone}
-                  onChange={(e) => setAttendant({ ...attendant, voice_tone: e.target.value })}
-                  placeholder="Ex: Atencioso, bem-humorado e objetivo"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#00E676]"
-                />
-              </div>
-            </div>
-
-            {/* Business Context & Custom Instructions */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-              <div className="flex items-center gap-2 text-slate-900 font-semibold text-sm pb-3 border-b border-slate-100">
-                <Info className="w-4 h-4 text-[#2E7D5A]" />
-                <span>Instruções do Negócio & Conduta</span>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Resumo das Atividades do Negócio</label>
-                <textarea
-                  rows={3}
-                  value={attendant.business_info}
-                  onChange={(e) => setAttendant({ ...attendant, business_info: e.target.value })}
-                  placeholder="Descreva o que seu negócio faz, localização e resumo dos atendimentos..."
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#00E676] leading-relaxed"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Instruções de Conduta Personalizadas</label>
-                <textarea
-                  rows={4}
-                  value={attendant.custom_instructions}
-                  onChange={(e) => setAttendant({ ...attendant, custom_instructions: e.target.value })}
-                  placeholder="Ex: NUNCA dê descontos sem autorização. Se o cliente reclamar, peça desculpas e acione o atendimento humano..."
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#00E676] leading-relaxed"
-                />
-              </div>
-            </div>
-
-            {/* Handover & Immediate Transfer Keywords Card */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-              <div className="flex items-center gap-2 text-slate-900 font-semibold text-sm pb-3 border-b border-slate-100">
-                <ShieldCheck className="w-4 h-4 text-[#2E7D5A]" />
-                <span>Palavras-chave de Transferência Imediata (Handover)</span>
-              </div>
-
-              <p className="text-xs text-slate-500">
-                Quando o cliente enviar qualquer uma destas palavras no WhatsApp, o robô pausará imediatamente e transferirá a conversa para a equipe humana no Inbox.
-              </p>
-
-              <div className="space-y-3">
-                <div className="flex flex-wrap gap-2 min-h-[42px] p-3 bg-slate-50 border border-slate-200 rounded-xl items-center">
-                  {(attendant.handover_keywords || []).map((kw, i) => (
-                    <span
-                      key={i}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-white border border-slate-200 text-slate-800 shadow-sm"
-                    >
-                      <span>{kw}</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const updated = (attendant.handover_keywords || []).filter((_, idx) => idx !== i);
-                          setAttendant({ ...attendant, handover_keywords: updated });
-                        }}
-                        className="text-slate-400 hover:text-rose-500 font-bold ml-1"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                  {(attendant.handover_keywords || []).length === 0 && (
-                    <span className="text-xs text-slate-400 italic">Nenhuma palavra cadastrada ainda.</span>
-                  )}
-                </div>
-
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newKeyword}
-                    onChange={(e) => setNewKeyword(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddKeyword();
-                      }
-                    }}
-                    placeholder="Adicionar termo (ex: financeiro, cancelar, falar com atendente)..."
-                    className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#00E676]"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddKeyword}
-                    className="px-4 py-2.5 bg-[#171901] hover:bg-[#4D4D61] text-white text-xs font-bold rounded-xl transition-colors shrink-0"
-                  >
-                    + Adicionar
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Agendamentos & Agenda de Calls */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-[#128C7E]" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">Agendamento de Calls & Consultas</h3>
-              </div>
-              <p className="text-xs text-slate-500">
-                Adicione o link da sua agenda oficial (Calendly, Cal.com ou Google Calendar). A IA identificará o interesse do cliente e enviará o link automaticamente no WhatsApp.
-              </p>
-
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    Link da Agenda (Calendly / Cal.com / Google Calendar)
-                  </label>
-                  <input
-                    type="url"
-                    value={attendant.calendar_link || ''}
-                    onChange={(e) => setAttendant({ ...attendant, calendar_link: e.target.value })}
-                    placeholder="https://calendly.com/sua-empresa/reuniao"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#128C7E]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    Instruções Específicas de Agendamento (Opcional)
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={attendant.calendar_instructions || ''}
-                    onChange={(e) => setAttendant({ ...attendant, calendar_instructions: e.target.value })}
-                    placeholder="Ex: Ofereça o link apenas se o cliente perguntar sobre planos ou pedir uma demonstração..."
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#128C7E]"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Grupo VIP & Comunidade WhatsApp */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-[#128C7E]" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">Comunidade & Grupo VIP no WhatsApp</h3>
-              </div>
-              <p className="text-xs text-slate-500">
-                Cole o link de convite do seu grupo de WhatsApp. A IA poderá convidar os clientes atendidos para fazerem parte da sua comunidade.
-              </p>
-
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    Link de Convite do Grupo de WhatsApp
-                  </label>
-                  <input
-                    type="url"
-                    value={attendant.group_invite_link || ''}
-                    onChange={(e) => setAttendant({ ...attendant, group_invite_link: e.target.value })}
-                    placeholder="https://chat.whatsapp.com/seu-codigo-de-convite"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#128C7E]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    Instruções para o Convite do Grupo (Opcional)
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={attendant.group_invite_instructions || ''}
-                    onChange={(e) => setAttendant({ ...attendant, group_invite_instructions: e.target.value })}
-                    placeholder="Ex: Convide o cliente para o grupo VIP de novidades ao final do atendimento se ele demonstrar interesse..."
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#128C7E]"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Bot Status & Save Button */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-xl bg-slate-50 border border-slate-200">
-                <div>
-                  <p className="text-xs font-bold text-slate-900">Pausar Atendente IA Globalmente</p>
-                  <p className="text-[11px] text-slate-500">
-                    {attendant.is_paused
-                      ? '⏸️ O bot está PAUSADO. As mensagens dos clientes aguardarão atendimento humano no Inbox.'
-                      : '🟢 O bot está ATIVO e responderá a todas as mensagens com a IA.'}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setAttendant({ ...attendant, is_paused: !attendant.is_paused })}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 shadow-sm ${
-                    attendant.is_paused
-                      ? 'bg-amber-500 hover:bg-amber-600 text-white'
-                      : 'bg-[#00E676] hover:bg-[#1DE9B6] text-[#171901]'
-                  }`}
-                >
-                  {attendant.is_paused ? '⏸️ Bot Pausado' : '🟢 Bot Ativo'}
-                </button>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isSaving}
-                className="w-full bg-[#00E676] hover:bg-[#43A047] text-[#171901] font-bold text-xs py-3.5 px-4 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2"
-              >
-                <Save className="w-4 h-4" />
-                <span>{isSaving ? 'Salvando...' : 'Salvar Todas as Configurações da Identidade'}</span>
-              </button>
-            </div>
-
-          </form>
-
-          {/* AI Prompt Live Preview Column */}
-          <div className="lg:col-span-5 space-y-4">
-            <div className="bg-slate-900 text-slate-200 p-6 rounded-2xl border border-slate-800 shadow-xl flex flex-col h-full">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
-                <div className="flex items-center gap-2">
-                  <Terminal className="w-4 h-4 text-[#00E676]" />
-                  <span className="text-xs font-bold uppercase tracking-wider text-[#00E676]">Prompt do Sistema (Claude IA)</span>
-                </div>
-                <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded font-mono">Gerado Dinamicamente</span>
-              </div>
-
-              <p className="text-xs text-slate-400 mb-3">
-                Este é o prompt exato construído em tempo real que será enviado para a API do Anthropic Claude a cada mensagem recebida no WhatsApp:
-              </p>
-
-              <div className="flex-1 bg-slate-950 p-4 rounded-xl font-mono text-[11px] leading-relaxed text-slate-300 overflow-y-auto max-h-[460px] border border-slate-800 whitespace-pre-wrap select-all">
-                {generatedPrompt}
-              </div>
+        {attendants.length > 1 && (
+          <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex items-start gap-3">
+            <Zap className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+            <div className="text-xs text-blue-800">
+              <strong>Roteamento multi-agente ativo.</strong>{' '}
+              Configure menu inicial e roteamento por IA em{' '}
+              <Link href="/dashboard/settings" className="underline font-bold">Configurações → Roteamento</Link>.
             </div>
           </div>
-
-        </div>
-
+        )}
       </div>
+
+      {/* Modal de Criação Rápida */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.5)' }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-center gap-2 font-bold text-[#171901]">
+              <Bot className="w-5 h-5" style={{ color: '#00E676' }} />
+              Novo Atendente Virtual
+            </div>
+
+            <form onSubmit={handleCreate} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-[#171901] mb-1">Nome do Atendente</label>
+                <input type="text" required value={newName} onChange={e => setNewName(e.target.value)}
+                  placeholder="Ex: Luna, Max, Sofia..." className="w-full bg-[#F4F5F4] border border-[#E0E3E1] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-[#00E676]" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-[#171901] mb-1">Setor / Departamento</label>
+                <input type="text" required value={newDept} onChange={e => setNewDept(e.target.value)}
+                  placeholder="Ex: Vendas, Suporte, Financeiro, Geral..." className="w-full bg-[#F4F5F4] border border-[#E0E3E1] rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-[#00E676]" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-[#171901] mb-2">Personalidade</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['professional', 'friendly', 'casual'] as const).map(p => (
+                    <button key={p} type="button" onClick={() => setNewPersonality(p)}
+                      className={`px-3 py-2 rounded-xl text-[10px] font-bold border transition-all ${newPersonality === p ? 'border-[#00E676] bg-[#F4F5F4] text-[#171901]' : 'border-[#E0E3E1] text-[#4D4D61]'}`}>
+                      {personalityLabel[p]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <p className="text-[10px] text-[#4D4D61]">💡 Configure personalidade completa e palavras-chave de roteamento após criar.</p>
+              <div className="flex items-center gap-3 pt-2">
+                <button type="button" onClick={() => setShowCreateModal(false)} className="flex-1 px-4 py-2.5 rounded-xl bg-[#F4F5F4] text-xs font-bold text-[#4D4D61]">Cancelar</button>
+                <button type="submit" disabled={isCreating}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-[#171901]"
+                  style={{ background: 'linear-gradient(135deg, #00E676 0%, #1DE9B6 100%)' }}>
+                  {isCreating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                  Criar Atendente
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

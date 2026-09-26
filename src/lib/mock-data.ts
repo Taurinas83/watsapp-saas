@@ -4,12 +4,15 @@ export const initialAttendant: Attendant = {
   id: 'attendant-1',
   organization_id: 'a0000000-0000-0000-0000-000000000001',
   name: 'Atendente Virtual',
+  department: 'Geral',
   personality: 'friendly',
   voice_tone: 'Amigável, acolhedor e objetivo',
   business_info: 'Somos uma empresa comprometida com a excelência no atendimento aos nossos clientes. Atendemos de segunda a sexta-feira das 08h às 18h.',
   custom_instructions: 'Sempre cumprimente os clientes com gentileza e educação. Responda às perguntas com clareza com base nas informações cadastradas.',
   whatsapp_status: 'disconnected',
   whatsapp_phone: '',
+  is_active: true,
+  routing_keywords: [],
   updated_at: new Date().toISOString()
 };
 

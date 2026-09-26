@@ -79,6 +79,7 @@ export interface Attendant {
   id: string;
   organization_id: string;
   name: string;
+  department: string;
   personality: PersonalityType;
   voice_tone: string;
   business_info: string;
@@ -90,12 +91,24 @@ export interface Attendant {
   copilot_mode?: boolean;
   allowed_topics?: string[];
   is_paused?: boolean;
+  is_active: boolean;
   handover_keywords?: string[];
+  routing_keywords?: string[];
   calendar_link?: string;
   calendar_instructions?: string;
   group_invite_link?: string;
   group_invite_instructions?: string;
   updated_at?: string;
+}
+
+export interface ConversationTransfer {
+  id: string;
+  conversation_id: string;
+  from_attendant_id?: string;
+  to_attendant_id: string;
+  transferred_by?: string;
+  reason?: string;
+  created_at: string;
 }
 
 export type ScheduledMessageStatus = 'pending' | 'processing' | 'sent' | 'failed' | 'cancelled';
@@ -178,6 +191,8 @@ export interface Conversation {
   tags: string[];
   internal_notes?: string;
   unread_count?: number;
+  attendant_id?: string;
+  intent_detected?: string;
 }
 
 export interface Message {
@@ -190,6 +205,8 @@ export interface Message {
   is_internal_note?: boolean;
   ai_suggestion?: string;
   created_at: string;
+  audio_url?: string;
+  content_type?: string;
 }
 
 export interface MetricsSummary {

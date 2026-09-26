@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { initialConversations, initialMessages } from '@/lib/mock-data';
-import { Conversation, ConversationStatus, Message } from '@/types';
-import { fetchConversations, fetchMessages, updateConversationStatus, getCurrentUserOrganizationId } from '@/lib/supabase/actions';
+import { Conversation, ConversationStatus, Message, Attendant } from '@/types';
+import { fetchConversations, fetchMessages, updateConversationStatus, getCurrentUserOrganizationId, fetchAttendants } from '@/lib/supabase/actions';
 import { DEFAULT_ORG_ID } from '@/lib/constants';
 import {
   Eye,
@@ -19,9 +19,11 @@ import {
   ShieldAlert,
   CheckCircle2,
   AlertTriangle,
-  RefreshCw
+  RefreshCw,
+  ArrowRightLeft,
 } from 'lucide-react';
 import Link from 'next/link';
+import { TransferModal } from '@/components/TransferModal';
 
 export default function SupervisionPage() {
   const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
@@ -30,6 +32,9 @@ export default function SupervisionPage() {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [orgId, setOrgId] = useState<string>(DEFAULT_ORG_ID);
+  const [attendants, setAttendants] = useState<Attendant[]>([]);
+  const [userId, setUserId] = useState<string>('');
+  const [transferConvId, setTransferConvId] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -40,6 +45,15 @@ export default function SupervisionPage() {
         setConversations(dbConvs);
         setSelectedConvId(prev => prev || dbConvs[0].id);
       }
+      const atts = await fetchAttendants(currentOrgId);
+      setAttendants(atts);
+
+      // Pegar userId do usuário logado para logging de transferências
+      const { createClient } = await import('@/lib/supabase/client');
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) setUserId(user.id);
+
       setIsLoading(false);
     }
     load();
@@ -255,6 +269,15 @@ export default function SupervisionPage() {
               </div>
 
               <div className="flex items-center gap-2">
+                {attendants.length > 1 && (
+                  <button
+                    onClick={() => setTransferConvId(selectedConv.id)}
+                    className="px-3.5 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 shadow-sm bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200"
+                  >
+                    <ArrowRightLeft className="w-4 h-4" />
+                    <span>Transferir Setor</span>
+                  </button>
+                )}
                 <button
                   onClick={() => handleToggleHandover(selectedConv.id)}
                   className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 shadow-sm ${
@@ -316,6 +339,21 @@ export default function SupervisionPage() {
         </div>
 
       </div>
+
+      {/* Transfer Modal */}
+      {transferConvId && (
+        <TransferModal
+          conversationId={transferConvId}
+          currentAttendantId={conversations.find(c => c.id === transferConvId)?.attendant_id}
+          attendants={attendants}
+          userId={userId}
+          onClose={() => setTransferConvId(null)}
+          onSuccess={(convId, newAttId) => {
+            setConversations(prev => prev.map(c => c.id === convId ? { ...c, attendant_id: newAttId } : c));
+          }}
+        />
+      )}
+
     </div>
   );
 }

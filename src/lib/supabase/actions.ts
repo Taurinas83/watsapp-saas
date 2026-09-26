@@ -107,6 +107,143 @@ export async function toggleBotPause(organizationId: string, isPaused: boolean):
 }
 
 /**
+ * ATENDENTES: Buscar TODOS os atendentes ativos de uma organização (multi-agente)
+ */
+export async function fetchAttendants(organizationId: string, customClient?: any): Promise<Attendant[]> {
+  const supabase = customClient || createClient();
+  const { data, error } = await supabase
+    .from('attendants')
+    .select('*')
+    .eq('organization_id', organizationId)
+    .eq('is_active', true)
+    .order('created_at', { ascending: true });
+
+  if (error || !data) return [];
+  return data as Attendant[];
+}
+
+/**
+ * ATENDENTES: Criar novo atendente virtual
+ */
+export async function createAttendant(
+  organizationId: string,
+  data: Partial<Attendant>
+): Promise<Attendant | null> {
+  const supabase = createClient();
+  const { data: newAttendant, error } = await supabase
+    .from('attendants')
+    .insert({
+      organization_id: organizationId,
+      name: data.name || 'Assistente Virtual',
+      department: data.department || 'Geral',
+      personality: data.personality || 'professional',
+      voice_tone: data.voice_tone || 'Atencioso, prestativo e eficiente',
+      business_info: data.business_info || '',
+      custom_instructions: data.custom_instructions || '',
+      routing_keywords: data.routing_keywords || [],
+      handover_keywords: data.handover_keywords || ['atendente', 'humano', 'pessoa'],
+      copilot_mode: data.copilot_mode ?? false,
+      is_paused: data.is_paused ?? false,
+      is_active: true,
+      calendar_link: data.calendar_link || null,
+      calendar_instructions: data.calendar_instructions || null,
+      group_invite_link: data.group_invite_link || null,
+      group_invite_instructions: data.group_invite_instructions || null,
+      updated_at: new Date().toISOString(),
+    })
+    .select()
+    .single();
+
+  if (error || !newAttendant) {
+    console.error('Erro ao criar atendente:', error);
+    return null;
+  }
+  return newAttendant as Attendant;
+}
+
+/**
+ * ATENDENTES: Desativar (soft delete) atendente
+ */
+export async function deleteAttendant(attendantId: string): Promise<boolean> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from('attendants')
+    .update({ is_active: false, updated_at: new Date().toISOString() })
+    .eq('id', attendantId);
+
+  if (error) console.error('Erro ao desativar atendente:', error);
+  return !error;
+}
+
+/**
+ * CONVERSAS: Transferir conversa entre atendentes e registrar histórico
+ */
+export async function transferConversation(
+  conversationId: string,
+  toAttendantId: string,
+  transferredBy?: string,
+  reason?: string,
+  fromAttendantId?: string
+): Promise<boolean> {
+  const supabase = createClient();
+
+  await supabase.from('conversation_transfers').insert({
+    conversation_id: conversationId,
+    from_attendant_id: fromAttendantId || null,
+    to_attendant_id: toAttendantId,
+    transferred_by: transferredBy || null,
+    reason: reason || null,
+  });
+
+  const { error } = await supabase
+    .from('conversations')
+    .update({ attendant_id: toAttendantId, status: 'bot_active' })
+    .eq('id', conversationId);
+
+  if (error) console.error('Erro ao transferir conversa:', error);
+  return !error;
+}
+
+/**
+ * ROTEAMENTO: Buscar configurações de roteamento da organização
+ */
+export async function fetchRoutingSettings(organizationId: string): Promise<{
+  enableInitialMenu: boolean;
+  enableAutoRouting: boolean;
+}> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from('organizations')
+    .select('enable_initial_menu, enable_auto_routing')
+    .eq('id', organizationId)
+    .single();
+
+  return {
+    enableInitialMenu: data?.enable_initial_menu ?? true,
+    enableAutoRouting: data?.enable_auto_routing ?? false,
+  };
+}
+
+/**
+ * ROTEAMENTO: Atualizar configurações de roteamento da organização
+ */
+export async function updateRoutingSettings(
+  organizationId: string,
+  settings: { enableInitialMenu?: boolean; enableAutoRouting?: boolean }
+): Promise<boolean> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from('organizations')
+    .update({
+      enable_initial_menu: settings.enableInitialMenu,
+      enable_auto_routing: settings.enableAutoRouting,
+    })
+    .eq('id', organizationId);
+
+  return !error;
+}
+
+/**
  * USO / CRÉDITOS: Buscar contagem de mensagens do mês e limite do plano
  */
 export async function fetchMonthlyUsage(organizationId: string): Promise<{ count: number; limit: number; planTier: string }> {
